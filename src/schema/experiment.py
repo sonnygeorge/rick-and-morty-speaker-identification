@@ -58,8 +58,8 @@ class Experiment:
         dev_labels = self.labels[self.train_test_dev == "dev"]
         dev_predictions = self.model.predict(dev_features)
         # Report scores
-        for scorer in SCORERS:
-            self.scores[scorer.__name__] = scorer(dev_labels, dev_predictions)
+        for name, scorer in SCORERS.items():
+            self.scores[name] = scorer(dev_labels, dev_predictions)
 
     def report_results(self) -> pd.DataFrame:
         """Returns a DataFrame containing the results of the experiment."""
