@@ -8,6 +8,7 @@ from src.feature_extractors import (
 )
 from src.schema.feature_extractor import FeatureExtractor
 from src.schema.configured_experiment import ConfiguredExperiment
+from src.globals import SEED
 
 
 FEATURE_EXTRACTORS: Dict[str, FeatureExtractor] = {
@@ -23,5 +24,6 @@ CONFIGURED_EXPERIMENTS: List[ConfiguredExperiment] = [
         model_type=DecisionTreeClassifier,
         criterion="entropy",
         max_depth=5,
+        random_state=SEED,
     ),
 ]

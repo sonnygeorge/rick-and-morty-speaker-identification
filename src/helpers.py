@@ -15,6 +15,7 @@ from src.globals import (
     SANCHEZ_FAMILY_LABELS,
     ENABLED_SPACY_COMPONENTS,
     SPLIT_RATIOS,
+    SEED,
 )
 from src.schema.configured_experiment import ConfiguredExperiment
 from src.schema.experiment import Experiment
@@ -48,12 +49,17 @@ def create_splits(index: pd.Index) -> "pd.Series[Literal['train', 'dev', 'test']
     """
     # Split between train and the rest
     train_index, rest_index = train_test_split(
-        index, test_size=SPLIT_RATIOS["test"] + SPLIT_RATIOS["dev"], shuffle=True
+        index,
+        test_size=SPLIT_RATIOS["test"] + SPLIT_RATIOS["dev"],
+        shuffle=True,
+        random_state=SEED,
     )
     # Adjust dev ratio to account for the fact that we already split off test
     ratio = SPLIT_RATIOS["dev"] / (SPLIT_RATIOS["dev"] + SPLIT_RATIOS["test"])
     # Second split between test and dev
-    test_index, dev_index = train_test_split(rest_index, test_size=ratio, shuffle=True)
+    test_index, dev_index = train_test_split(
+        rest_index, test_size=ratio, shuffle=True, random_state=SEED
+    )
 
     # Create the final Series with labels
     labels = pd.Series(index=index, dtype="object")
