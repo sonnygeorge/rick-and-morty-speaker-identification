@@ -1,0 +1,27 @@
+from typing import Dict, List
+
+from sklearn.tree import DecisionTreeClassifier
+
+from src.feature_extractors import (
+    get_avg_noun_embedding,
+    get_avg_verb_embedding,
+)
+from src.feature_extractor import FeatureExtractor
+from configured_experiment import ConfiguredExperiment
+
+
+FEATURE_EXTRACTORS: Dict[str, FeatureExtractor] = {
+    "Average Noun Embedding": get_avg_noun_embedding,
+    "Average Verb Embedding": get_avg_verb_embedding,
+}
+
+
+CONFIGURED_EXPERIMENTS: List[ConfiguredExperiment] = [
+    ConfiguredExperiment(
+        feature_extractor_names=["Average Noun Embedding"],
+        spacy_model_name="en_core_web_sm",
+        model=DecisionTreeClassifier,
+        criterion="entropy",
+        max_depth=5,
+    ),
+]
