@@ -1,7 +1,9 @@
 from functools import partial
-from typing import Dict, List
+from typing import Dict, List, Type
 
-from src.experiment import Experiment
+from sklearn.base import BaseEstimator
+
+from src.schema.experiment import Experiment
 
 
 class ConfiguredExperiment(Experiment):
@@ -11,9 +13,9 @@ class ConfiguredExperiment(Experiment):
         self,
         feature_extractor_names: List[str],
         spacy_model_name: str,
-        model: type,
+        model_type: Type[BaseEstimator],
         **kwargs
     ):
         self.feature_extractor_names = feature_extractor_names
         self.spacy_model_name = spacy_model_name
-        self.Experiment = partial(Experiment, model, **kwargs)
+        self.Experiment = partial(Experiment, model_type=model_type, **kwargs)

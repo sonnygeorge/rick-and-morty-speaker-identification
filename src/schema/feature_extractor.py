@@ -82,7 +82,7 @@ class FeatureExtractorWithDocArgOnly(Protocol):
 #         ...
 
 
-def feature_extractor() -> FeatureExtractor:
+def feature_extractor(func: FeatureExtractorWithDocArgOnly) -> FeatureExtractor:
     """Decorator that adapts a FeatureExtractorWithDocArgOnly function to conform to
     the FeatureExtractor protocol.
 
@@ -95,22 +95,19 @@ def feature_extractor() -> FeatureExtractor:
         FeatureExtractor: A function adhering to the FeatureExtractor protocol.
     """
 
-    def decorator(func: FeatureExtractorWithDocArgOnly) -> FeatureExtractor:
-        @wraps(func)
-        def wrapper(
-            doc: Optional[Doc] = None,
-            index: Optional[int] = None,
-            docs: "Optional[pd.Series[Doc]]" = None,
-            **kwargs: Any,
-        ) -> Dict[str, float]:
-            if doc is not None:
-                return func(doc, **kwargs)
-            elif docs is not None and index is not None:
-                doc = docs[index]
-                return func(doc, **kwargs)
-            # Else raise an error
-            raise ValueError("Must take either `doc` or `index` and `docs`")
+    @wraps(func)
+    def wrapper(
+        doc: Optional[Doc] = None,
+        index: Optional[int] = None,
+        docs: "Optional[pd.Series[Doc]]" = None,
+        **kwargs: Any,
+    ) -> Dict[str, float]:
+        if doc is not None:
+            return func(doc, **kwargs)
+        elif docs is not None and index is not None:
+            doc = docs[index]
+            return func(doc, **kwargs)
+        # Else raise an error
+        raise ValueError("Must take either `doc` or `index` and `docs`")
 
-        return wrapper
-
-    return decorator
+    return wrapper
