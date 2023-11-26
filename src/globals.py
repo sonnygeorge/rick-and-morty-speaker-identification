@@ -1,9 +1,7 @@
 from functools import partial
+from typing import Dict, Callable
 
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
-
-from src.schema.feature_extractor import FeatureExtractor
-from typing import Dict, Callable
 
 import numpy as np
 
@@ -18,7 +16,6 @@ SANCHEZ_FAMILY_LABELS = {
     "Summer",
 }
 SPLIT_RATIOS = {"train": 0.74, "dev": 0.13, "test": 0.13}
-ENABLED_SPACY_COMPONENTS = ["tagger", "parser", "ner"]
 
 macro_f1_score = partial(f1_score, average="macro")
 

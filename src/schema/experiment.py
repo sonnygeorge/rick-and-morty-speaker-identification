@@ -63,4 +63,5 @@ class Experiment:
 
     def report_results(self) -> pd.DataFrame:
         """Returns a DataFrame containing the results of the experiment."""
+        print(list(self.feature_extractors.keys()))
         print(self.scores)  # FIXME

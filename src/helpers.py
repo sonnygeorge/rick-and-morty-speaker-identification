@@ -13,7 +13,6 @@ from sklearn.model_selection import train_test_split
 from src.globals import (
     DATA_FPATH,
     SANCHEZ_FAMILY_LABELS,
-    ENABLED_SPACY_COMPONENTS,
     SPLIT_RATIOS,
     SEED,
 )
@@ -69,26 +68,6 @@ def create_splits(index: pd.Index) -> "pd.Series[Literal['train', 'dev', 'test']
     return labels
 
 
-def preprocess_spacy_doc(
-    input_text: str,
-    nlp: Language,
-) -> Doc:
-    """Applies SpaCy preprocessing to the input text and returns the processed Doc.
-
-    Args:
-        nlp (Language): A SpaCy Language object.
-        input_text (str): The input text to be processed.
-        enabled_components (List[str]): A list of pipeline components to be enabled.
-
-    Returns:
-        Doc: The processed SpaCy Doc object.
-    """
-    disabled = [c for c in nlp.pipe_names if c not in ENABLED_SPACY_COMPONENTS]
-    with nlp.disable_pipes(disabled):
-        doc = nlp(input_text)
-    return doc
-
-
 def initialize_experiments(
     configured_experiments: List[ConfiguredExperiment],
 ) -> List[Experiment]:
@@ -125,7 +104,7 @@ def initialize_experiments(
         model_load_time = perf_counter() - start
         # Preprocess utterances with SpaCy
         start = perf_counter()
-        docs = utterances.apply(preprocess_spacy_doc, nlp=nlp)
+        docs = utterances.apply(lambda utterance: nlp(utterance))
         preprocess_utterances_time = perf_counter() - start
         n_utterances = len(utterances)
         avg_utterance_preprocessing_time = preprocess_utterances_time / n_utterances
@@ -136,13 +115,18 @@ def initialize_experiments(
             caching_extractors[name] = cache(cachable_extractor)
         # Initialize experiment objects
         for configured_experiment in configured_experiments:
+            feature_extractors = {
+                name: extractor
+                for name, extractor in caching_extractors.items()
+                if name in configured_experiment.feature_extractor_names
+            }
             initialized_experiments.append(
                 configured_experiment.Experiment(
                     docs=docs,
                     labels=labels,
                     train_test_dev=train_test_dev,
                     spacy_model_name=spacy_model_name,
-                    feature_extractors=caching_extractors,
+                    feature_extractors=feature_extractors,
                     model_load_time=model_load_time,
                     avg_utterance_preprocessing_time=avg_utterance_preprocessing_time,
                 )
