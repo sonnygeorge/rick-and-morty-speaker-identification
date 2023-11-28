@@ -10,6 +10,8 @@ from sklearn.feature_extraction import DictVectorizer
 from src.schema.feature_extractor import FeatureExtractor
 from src.globals import SCORERS
 
+# TODO: Experiment names?
+
 
 class Experiment:
     def __init__(

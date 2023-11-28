@@ -18,7 +18,6 @@ from src.word_clusters import (
     FOOD_WORDS,
 )
 
-
 _DATA_DIR = "data"
 _RAW_SCRIPT_DATA_FNAME = "RickAndMortyScripts.csv"
 _TRAIN_DATA_FNAME = "train_data.csv"

@@ -47,10 +47,5 @@ Demonstrate the building of a basic data science project/experiment, emphasizing
     - $\text{TF}(t, d) = \frac{\text{Number of times term } t \text{ appears in a document } d}{\text{Total number of terms in the document}}$
     - $\text{IDF}(t, D) = \log \left( \frac{\text{Total number of documents in the corpus } D}{\text{Number of documents with term } t \text{ in it}} \right)$
     - $\text{TF-IDF}(t, d, D) = \text{TF}(t, d) \times \text{IDF}(t, D)$
-2. Calculate unigram/bigram/trigram counts (and other misc counts useful for TF-IDF), and pass those dicts to frequency extractors that use them.
-3. Use SpaCy's "Matcher"(?) to extract phrases (e.g. "wubba lubba dub dub")?
-4. Generate markdown reports and save them to .md files and a clean, minimal printout of name & results to the console
-5. Add auto-gen'ed experiment names
-6. Add to Gradio app the dashboard of experiments results with:
-    - Multi-color grouped bar charts of metrics where each group is an experiment and each bar is a performance metric (plus avg feature importance chart?)
-    - Pick-a-model multiselect that shows the markdown report of the selected model and loads the interactive inference app for that model... (plus feature importance chart?)
+2. Reconsider selection of / weighting of n-grams (TF-IDF?)
+3. Gradio app to compare experiment outputs

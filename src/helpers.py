@@ -22,9 +22,9 @@ from src.globals import (
 @cache
 def load_data() -> (
     Tuple[
-        "pd.Series[Literal['train', 'test', 'dev']]",  # train/text/dev allocations
-        "pd.Series[str]",  # speaker labels
-        "pd.Series[str]",  # utterances
+        "pd.Series[Literal['train', 'test', 'dev']]",  # Train/text/dev allocations
+        "pd.Series[str]",  # Speaker labels
+        "pd.Series[str]",  # Utterances
     ]
 ):
     """Loads the data from the data directory.
