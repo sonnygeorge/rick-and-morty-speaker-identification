@@ -10,7 +10,10 @@ from sklearn.feature_extraction import DictVectorizer
 from src.schema.feature_extractor import FeatureExtractor
 from src.globals import SCORERS
 
-# TODO: Experiment names?
+# TODO:
+#   - Experiment names
+#   - Sum feature importance across extractors
+#   - Re-train after omitting features with 0 importance?
 
 
 class Experiment:
@@ -49,7 +52,7 @@ class Experiment:
 
     def run(self) -> None:
         """Runs the experiment."""
-        print("🚀 Running experiment...")
+        print("🚀 Extracting feature...")
         # Extract features
         start = perf_counter()
         feature_dicts = self.docs.index.map(self._extract_features_from_doc)

@@ -95,7 +95,7 @@ def avg_root_verb_embedding(doc: Doc, gensim_model_slug: str) -> Dict[str, float
     return output
 
 
-@feature_extractor
+@feature_extractor  # FIXME: Broken - always outputting {'n_non_proper_nouns': 0}
 def avg_non_proper_noun_embedding(doc: Doc, gensim_model_slug: str) -> Dict[str, float]:
     """Extracts the average embedding of all non-proper nouns in the input text."""
     # Find all non-proper nouns (including compound nouns)
@@ -123,7 +123,7 @@ def avg_non_proper_noun_embedding(doc: Doc, gensim_model_slug: str) -> Dict[str,
             avg_embedding = sum(non_proper_noun_embeddings) / n_non_proper_nouns
             for i, value in enumerate(avg_embedding):
                 output[f"avg_non_proper_noun_embedding_{i}"] = value
-    print(output)
+    # print(output)  # FIXME: Remove
     return output
 
 

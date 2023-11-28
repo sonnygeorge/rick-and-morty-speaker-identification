@@ -143,7 +143,7 @@ FEATURE_EXTRACTORS: Dict[str, FeatureExtractor] = {
         topic_cluster="Food",
     ),
     # Other
-    "Porportion Of Tokens That Are Stop Words": proportion_stop_words,
+    "Proportion Of Tokens That Are Stop Words": proportion_stop_words,
 }
 
 
@@ -169,7 +169,7 @@ FEATURE_COMBOS_TO_TRY = [
         "Topical Proximity - Fancy Science (glove-twitter-25)",
         "Topical Proximity - Food (glove-twitter-25)",
         "Average Root Verb Embedding (glove-twitter-25)",
-        "Porportion Of Tokens That Are Stop Words",
+        "Proportion Of Tokens That Are Stop Words",
     ],
     [
         "Total Sentence Count",
@@ -217,7 +217,7 @@ FEATURE_COMBOS_TO_TRY = [
         "Topical Proximity - Fancy Science (glove-twitter-25)",
         "Topical Proximity - Food (glove-twitter-25)",
         "Average Root Verb Embedding (glove-twitter-25)",
-        "Porportion Of Tokens That Are Stop Words",
+        "Proportion Of Tokens That Are Stop Words",
     ],
     [
         "Total Sentence Count",
@@ -239,7 +239,7 @@ FEATURE_COMBOS_TO_TRY = [
         "Topical Proximity - SciFi Creature (glove-twitter-25)",
         "Topical Proximity - Fancy Science (glove-twitter-25)",
         "Average Root Verb Embedding (glove-twitter-25)",
-        "Porportion Of Tokens That Are Stop Words",
+        "Proportion Of Tokens That Are Stop Words",
     ],
     [
         "Total Sentence Count",
@@ -276,7 +276,7 @@ FEATURE_COMBOS_TO_TRY = [
         "Topical Proximity - Intoxication (glove-twitter-25)",
         "Topical Proximity - Fancy Science (glove-twitter-25)",
         "Average Root Verb Embedding (glove-twitter-25)",
-        "Porportion Of Tokens That Are Stop Words",
+        "Proportion Of Tokens That Are Stop Words",
     ],
     [
         "Total Sentence Count",
@@ -288,20 +288,7 @@ FEATURE_COMBOS_TO_TRY = [
         "1000 Most Characteristic 1-Grams",
         "200 Most Characteristic 2-Grams",
         "Average Root Verb Embedding (glove-twitter-25)",
-        "Porportion Of Tokens That Are Stop Words",
-    ],
-    [
-        "Total Sentence Count",
-        "Average Tokens Per Sentence",
-        "Average Word Length",
-        "Question Marks Per Sentence",
-        "Exclamation Marks Per Sentence",
-        "Dashes Per Sentence",
-        "1000 Most Characteristic 1-Grams",
-        "200 Most Characteristic 2-Grams",
-        "Average Non-Proper Noun Embedding (glove-twitter-25)",
-        "Topical Proximity - Fancy Science (glove-twitter-25)",
-        "Porportion Of Tokens That Are Stop Words",
+        "Proportion Of Tokens That Are Stop Words",
     ],
 ]
 
@@ -365,12 +352,6 @@ CONFIGURED_EXPERIMENTS: List[ConfiguredExperiment] = [
     ),
     ConfiguredExperiment(
         feature_extractor_names=FEATURE_COMBOS_TO_TRY[8],
-        spacy_model_name="en_core_web_sm",
-        model_type=GradientBoostingClassifier,
-        random_state=RANDOM_SEED,
-    ),
-    ConfiguredExperiment(
-        feature_extractor_names=FEATURE_COMBOS_TO_TRY[9],
         spacy_model_name="en_core_web_sm",
         model_type=GradientBoostingClassifier,
         random_state=RANDOM_SEED,
