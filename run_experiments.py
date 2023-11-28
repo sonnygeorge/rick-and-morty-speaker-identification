@@ -1,4 +1,4 @@
-from src.helpers import initialize_experiments
+from src.initialize_experiments import initialize_experiments
 from src.config import CONFIGURED_EXPERIMENTS
 
 

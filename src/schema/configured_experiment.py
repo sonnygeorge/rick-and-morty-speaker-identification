@@ -18,4 +18,4 @@ class ConfiguredExperiment(Experiment):
     ):
         self.feature_extractor_names = feature_extractor_names
         self.spacy_model_name = spacy_model_name
-        self.Experiment = partial(Experiment, model_type=model_type, **kwargs)
+        self.ExperimentType = partial(Experiment, model_type=model_type, **kwargs)

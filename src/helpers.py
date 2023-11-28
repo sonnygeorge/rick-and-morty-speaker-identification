@@ -1,134 +1,212 @@
-from typing import List, Tuple, Literal
-from functools import cache, partial
-from collections import defaultdict
 from time import perf_counter
 
+from typing import List, Tuple, Literal, Dict, Set
+from functools import cache
+from collections import defaultdict, Counter
+
+from gensim.models import KeyedVectors
+import gensim.downloader
 import pandas as pd
 import numpy as np
-import spacy
-from spacy.tokens import Doc
-from spacy.language import Language
-from sklearn.model_selection import train_test_split
 
 from src.globals import (
-    DATA_FPATH,
-    SANCHEZ_FAMILY_LABELS,
-    SPLIT_RATIOS,
-    SEED,
+    TEST_DATA_FPATH,
+    DEV_DATA_FPATH,
+    TRAIN_DATA_FPATH,
+    START_TOKEN,
+    END_TOKEN,
+    N_GRAMS_TO_COUNT,
 )
-from src.schema.configured_experiment import ConfiguredExperiment
-from src.schema.experiment import Experiment
-from src.config import FEATURE_EXTRACTORS
 
 
-def load_data() -> Tuple["pd.Series[str]", "pd.Series[str]"]:
-    """Reads in Rick and Morty script data, filters it to the Sanchez family, and returns
-    the utterances and speakers as Series.
+@cache
+def load_data() -> (
+    Tuple[
+        "pd.Series[Literal['train', 'test', 'dev']]",  # train/text/dev allocations
+        "pd.Series[str]",  # speaker labels
+        "pd.Series[str]",  # utterances
+    ]
+):
+    """Loads the data from the data directory.
 
     Returns:
-        Tuple[pd.Series[str], pd.Series[str]]: A tuple containing the utterances and
-            speakers respectively as Series.
+        Tuple[
+            "pd.Series[Literal['train', 'test', 'dev']]",  # `train_test_dev`
+            "pd.Series[str]",  # `labels`
+            "pd.Series[str]",  # `utterances`
+        ]:
+        A tuple of pd.Series where respectively...
+            - `train_test_dev`: a Series of strings indicating whether each utterance
+              is in the train, dev, or test set.
+            - `labels`:  a Series of strings indicating the speaker of each utterance.
+            - `utterances`:  a Series of strings, one for each utterance.
     """
-    df = pd.read_csv(DATA_FPATH)
-    df = df[df["name"].isin(SANCHEZ_FAMILY_LABELS)]
-    X, y = df["line"], df["name"]
-    return X, y
+    train_df = pd.read_csv(TRAIN_DATA_FPATH)
+    dev_df = pd.read_csv(DEV_DATA_FPATH)
+    test_df = pd.read_csv(TEST_DATA_FPATH)
+    train_test_dev = pd.concat(
+        [
+            pd.Series(["train"] * len(train_df)),
+            pd.Series(["dev"] * len(dev_df)),
+            pd.Series(["test"] * len(test_df)),
+        ],
+        ignore_index=True,
+    )
+    labels = pd.concat(
+        [train_df["label"], dev_df["label"], test_df["label"]],
+        ignore_index=True,
+    )
+    utterances = pd.concat(
+        [train_df["utterance"], dev_df["utterance"], test_df["utterance"]],
+        ignore_index=True,
+    )
+    return train_test_dev, labels, utterances
 
 
-def create_splits(index: pd.Index) -> "pd.Series[Literal['train', 'dev', 'test']]":
-    """
-    Randomly assigns 'train', 'dev', or 'test' to each element of a pandas Series index
-    according to the partition ratios defined in `SPLIT_RATIOS`.
+@cache
+def load_embedding_model(slug: str) -> KeyedVectors:
+    """Loads a gensim embedding model given its slug."""
+    print(f"🔍 Loading gensim embedding model: {slug}")
+    start = perf_counter()
+    print(f"⌛ Loaded {slug} in {perf_counter() - start:.2f} seconds.")
+    return gensim.downloader.load(slug)
+
+
+@cache
+def convert_text_to_n_grams(text: str, n: int) -> List[Tuple[str]]:
+    """Converts a SpaCy Doc to a list of n-grams (after lowering & removing punctuation).
 
     Args:
-        index (pd.Index): The index of a pandas Series.
+        text (str): The text to convert to n-grams.
+        n (int): The length of the n-grams.
 
     Returns:
-        pd.Series: A Series with the same index, with labels 'train', 'dev', or 'test'.
+        List[str]: A list of n-grams.
     """
-    # Split between train and the rest
-    train_index, rest_index = train_test_split(
-        index,
-        test_size=SPLIT_RATIOS["test"] + SPLIT_RATIOS["dev"],
-        shuffle=True,
-        random_state=SEED,
-    )
-    # Adjust dev ratio to account for the fact that we already split off test
-    ratio = SPLIT_RATIOS["dev"] / (SPLIT_RATIOS["dev"] + SPLIT_RATIOS["test"])
-    # Second split between test and dev
-    test_index, dev_index = train_test_split(
-        rest_index, test_size=ratio, shuffle=True, random_state=SEED
-    )
-
-    # Create the final Series with labels
-    labels = pd.Series(index=index, dtype="object")
-    labels[train_index] = "train"
-    labels[test_index] = "test"
-    labels[dev_index] = "dev"
-    return labels
+    # no_punctuation = "".join([char for char in text if char.isalnum() or char == " "])
+    lowered_tokens = text.lower().split()
+    if n > 1:
+        lowered_tokens = [START_TOKEN] + lowered_tokens
+        lowered_tokens.append(END_TOKEN)
+    n_grams = []
+    for start_idx in range(len(lowered_tokens) - n + 1):
+        n_gram = " ".join(lowered_tokens[start_idx : start_idx + n])
+        n_grams.append(n_gram)
+    return n_grams
 
 
-def initialize_experiments(
-    configured_experiments: List[ConfiguredExperiment],
-) -> List[Experiment]:
-    """Initializes a list of experiments with the given configured experiments.
+@cache
+def get_counts_by_speaker_by_n_gram_in_training_data() -> Dict[int, Dict[str, Counter]]:
+    # FIXME: Docstring
+    train_test_dev, labels, utterances = load_data()
+    train_utterances = utterances[train_test_dev == "train"]
+    n_grams_by_utterance_by_n = {}
+    for n in N_GRAMS_TO_COUNT:
+        n_grams_by_utterance_by_n[n] = train_utterances.apply(
+            lambda doc: convert_text_to_n_grams(doc, n)
+        )
+    counts_by_speaker_by_n_gram = {}
+    for n, n_grams_by_utterance in n_grams_by_utterance_by_n.items():
+        counts_by_speaker = defaultdict(Counter)
+        for speaker, n_grams in zip(labels, n_grams_by_utterance):
+            counts_by_speaker[speaker].update(n_grams)
+        counts_by_speaker_by_n_gram[n] = counts_by_speaker
 
-    Args:
-        configured_experiments (List[ConfiguredExperiment]): A list of configured
-            experiments.
+    return counts_by_speaker_by_n_gram
 
-    Returns:
-        List[Experiment]: A list of initialized experiment objects.
-    """
-    utterances, labels = load_data()
-    train_test_dev = create_splits(utterances.index)
-    # Print number of uterrances per speaker per split
-    for split in ["train", "dev", "test"]:
-        print(f"Number of utterances per speaker in {split} split:")
-        print(labels[train_test_dev == split].value_counts())
-    # Organize experiments by SpaCy model
-    configured_experiments_by_spacy_model = defaultdict(list)
-    for configured_experiment in configured_experiments:
-        configured_experiments_by_spacy_model[
-            configured_experiment.spacy_model_name
-        ].append(configured_experiment)
-    # Iterate through SpaCy models
-    initialized_experiments = []
-    for (
-        spacy_model_name,
-        configured_experiments,
-    ) in configured_experiments_by_spacy_model.items():
-        # Load SpaCy model
-        start = perf_counter()
-        nlp = spacy.load(spacy_model_name)
-        model_load_time = perf_counter() - start
-        # Preprocess utterances with SpaCy
-        start = perf_counter()
-        docs = utterances.apply(lambda utterance: nlp(utterance))
-        preprocess_utterances_time = perf_counter() - start
-        n_utterances = len(utterances)
-        avg_utterance_preprocessing_time = preprocess_utterances_time / n_utterances
-        # Partialize feature extractors with docs and add caching
-        caching_extractors = {}
-        for name, feature_extractor in FEATURE_EXTRACTORS.items():
-            cachable_extractor = partial(feature_extractor, docs=docs)
-            caching_extractors[name] = cache(cachable_extractor)
-        # Initialize experiment objects
-        for configured_experiment in configured_experiments:
-            feature_extractors = {
-                name: extractor
-                for name, extractor in caching_extractors.items()
-                if name in configured_experiment.feature_extractor_names
-            }
-            initialized_experiments.append(
-                configured_experiment.Experiment(
-                    docs=docs,
-                    labels=labels,
-                    train_test_dev=train_test_dev,
-                    spacy_model_name=spacy_model_name,
-                    feature_extractors=feature_extractors,
-                    model_load_time=model_load_time,
-                    avg_utterance_preprocessing_time=avg_utterance_preprocessing_time,
-                )
-            )
-    return initialized_experiments
+
+# @cache
+# def get_most_characteristic_n_grams_in_training_data(num: int, n: int) -> Set[str]:
+#     """Uses custom 'TF-ISF' formula to determine the {num} most characteristic n-grams
+#     for each speaker in the training data.
+
+#     TF-IDF is a measure of originality of an n-gram to a document by comparing the
+#     number of times an n-gram appears in a document with the number of documents the
+#     n-gram appears in. Here, we adapt this formula to instead quantify the originality of
+#     an n-gram to a speaker.
+
+#     I.E. -- TF-ISF ("term frequency, inverse speaker frequency) = TF * ISF
+
+#     Where:
+
+#         TF = (
+#             N times speaker has uttered the n-gram term
+#             / N utterances of any n-gram by speaker
+#         )
+
+#         ISF = log(
+#             N times any speaker has uttered the n-gram term
+#             / N utterances of any n-gram by any speaker
+#         )
+
+#     Args:
+#         num (int): The max number of most characteristic n-grams to extract per speaker.
+#         n (int): The n-gram length.
+#     """
+#     counts_by_speaker = get_counts_by_speaker_by_n_gram_in_training_data()[n]
+
+#     n_grams_counts_across_all_speakers = Counter()
+#     for _, counts in counts_by_speaker.items():
+#         n_grams_counts_across_all_speakers.update(counts)
+
+#     tf_isf_by_speaker: Dict[str, Dict[int, str]] = {}
+#     for speaker, counts in counts_by_speaker.items():
+#         tf_isf_scores = {}
+#         for n_gram, n_times_uttered_n_gram in counts.items():
+#             # Calculate TF
+#             tf = n_times_uttered_n_gram / sum(counts.values())
+#             # Calculate ISF
+#             n_times_uttered_all_speakers = n_grams_counts_across_all_speakers[n_gram]
+#             isf = n_times_uttered_all_speakers / sum(
+#                 n_grams_counts_across_all_speakers.values()
+#             )
+#             # Calculate TF-ISF
+#             tf_isf_scores[n_gram] = tf * isf
+#         tf_isf_by_speaker[speaker] = tf_isf_scores
+
+#     most_characteristic_n_grams = set()
+#     for speaker, tf_isf_scores in tf_isf_by_speaker.items():
+#         for n_gram, _ in sorted(
+#             tf_isf_scores.items(), key=lambda item: item[1], reverse=True
+#         )[:num]:
+#             most_characteristic_n_grams.add((n_gram))
+#     return most_characteristic_n_grams
+
+
+@cache
+def get_most_characteristic_n_grams_in_training_data(num: int, n: int) -> Set[str]:
+    # TODO: Docstring
+    # Get counts of n-grams for each speaker
+    counts_by_speaker = get_counts_by_speaker_by_n_gram_in_training_data()[n]
+    # Pre-calculate normalized speaker frequencies
+    speaker_freqs_by_speaker: Dict[str, Dict[str, float]] = {}
+    for speaker, counts in counts_by_speaker.items():
+        speaker_freqs = {}
+        for n_gram, n_times_uttered_n_gram in counts.items():
+            speaker_freq = n_times_uttered_n_gram / sum(counts.values())
+            speaker_freqs[n_gram] = speaker_freq
+        speaker_freqs_by_speaker[speaker] = speaker_freqs
+    # Calculate originality scores and add the {num} highest to overall set
+    most_characteristic_n_grams_in_training_data = set()
+    for speaker, speaker_freqs in speaker_freqs_by_speaker.items():
+        originality_scores = {}
+        for n_gram, speaker_freq in speaker_freqs.items():
+            # Get average speaker freq of n-gram across all other speakers
+            non_speaker_speaker_freqs = []
+            for speaker_2, speaker_freqs_2 in speaker_freqs_by_speaker.items():
+                if speaker_2 == speaker:
+                    continue
+                if n_gram in speaker_freqs_2:
+                    non_speaker_speaker_freqs.append(speaker_freqs_2[n_gram])
+                else:  # N-gram not uttered by speaker
+                    non_speaker_speaker_freqs.append(0)
+            avg_speaker_freq_across_other_speakers = np.mean(non_speaker_speaker_freqs)
+            # Compute n-gram originality score for current speaker
+            originality_score = speaker_freq - avg_speaker_freq_across_other_speakers
+            originality_scores[n_gram] = originality_score
+        # Add the {num} highest originality scores to overall set
+        for n_gram, _ in sorted(
+            originality_scores.items(), key=lambda item: item[1], reverse=True
+        )[:num]:
+            most_characteristic_n_grams_in_training_data.add((n_gram))
+    return most_characteristic_n_grams_in_training_data
