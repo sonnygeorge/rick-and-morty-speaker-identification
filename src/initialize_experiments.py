@@ -25,7 +25,7 @@ def initialize_experiments(
     """
     print("🚀 Initializing experiments...")
     # Load data
-    train_test_dev, labels, utterances = load_data()
+    train_test_dev, labels, utterances, previous_speakers = load_data()
     # Organize experiments by SpaCy model
     configured_experiments_by_spacy_model = defaultdict(list)
     for cnfg_exp in configured_experiments:
@@ -51,8 +51,11 @@ def initialize_experiments(
         # Partialize feature extractors with docs and add caching
         caching_extractors = {}
         for name, feature_extractor in FEATURE_EXTRACTORS.items():
-            cachable_extractor = partial(feature_extractor, docs=docs)
-            caching_extractors[name] = cache(cachable_extractor)
+            if feature_extractor is None:
+                caching_extractors[name] = None
+            else:
+                cachable_extractor = partial(feature_extractor, docs=docs)
+                caching_extractors[name] = cache(cachable_extractor)
         # Initialize experiment objects
         for cnfg_exp in configured_experiments:
             feature_extractors = {
@@ -65,6 +68,7 @@ def initialize_experiments(
                     docs=docs,
                     labels=labels,
                     train_test_dev=train_test_dev,
+                    previous_speakers=previous_speakers,
                     spacy_model_name=spacy_model_name,
                     feature_extractors=feature_extractors,
                     spacy_model_load_time=spacy_model_load_time,

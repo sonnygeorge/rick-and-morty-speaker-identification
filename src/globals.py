@@ -18,17 +18,18 @@ from src.word_clusters import (
     FOOD_WORDS,
 )
 
-_DATA_DIR = "data"
-_RAW_SCRIPT_DATA_FNAME = "RickAndMortyScripts.csv"
-_TRAIN_DATA_FNAME = "train_data.csv"
-_DEV_DATA_FNAME = "dev_data.csv"
-_TEST_DATA_FNAME = "test_data.csv"
+DATA_DIR_PATH = "data"
+RAW_SCRIPT_DATA_FNAME = "RickAndMortyScripts.csv"
+TRAIN_STR = "train"
+DEV_STR = "dev"
+TEST_STR = "test"
+RANDOM_STR = "random"
+BY_EPISODE_STR = "by_episode"
+RESULTS_CSV_FNAME = "results.csv"
 
-RAW_SCRIPT_DATA_FPATH = os.path.join(_DATA_DIR, _RAW_SCRIPT_DATA_FNAME)
-TRAIN_DATA_FPATH = os.path.join(_DATA_DIR, _TRAIN_DATA_FNAME)
-DEV_DATA_FPATH = os.path.join(_DATA_DIR, _DEV_DATA_FNAME)
-TEST_DATA_FPATH = os.path.join(_DATA_DIR, _TEST_DATA_FNAME)
-RESULTS_CSV_FPATH = os.path.join(_DATA_DIR, "results.csv")
+RAW_SCRIPT_DATA_FPATH = os.path.join(DATA_DIR_PATH, RAW_SCRIPT_DATA_FNAME)
+RESULTS_CSV_FPATH = os.path.join(DATA_DIR_PATH, RESULTS_CSV_FNAME)
+
 
 RANDOM_SEED = 42
 
