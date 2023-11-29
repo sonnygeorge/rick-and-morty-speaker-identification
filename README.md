@@ -49,3 +49,25 @@ Demonstrate the building of a basic data science project/experiment, emphasizing
     - $\text{TF-IDF}(t, d, D) = \text{TF}(t, d) \times \text{IDF}(t, D)$
 2. Reconsider selection of / weighting of n-grams (TF-IDF?)
 3. Gradio app to compare experiment outputs
+
+### Task Difficulty
+
+To understand how difficult the task is, try and guess who said the following lines:
+
+| Utterance | Speaker |
+| --- | --- |
+| Shut up, Jerry. | ? |
+| I never said I was angry at you. | ? |
+| YOU KNOW WHAT, NO RICK! I'M NOT GONNA HAND YOU THE SCREWDRIVER! Uh, I'm never gonna hand you anything ever again, Rick.  I'm always helping you with this and that and the other thing. Www...what about me, Rick? Www... why can't you just help me out once, once, for once? | ? |
+| Dad I would like you to tell me what's in the syringe. | ? |
+
+Here are the answers. How good did you do?
+
+| Utterance | Speaker |
+| --- | --- |
+| Shut up, Jerry. | Beth |
+| I never said I was angry at you. | Summer |
+| YOU KNOW WHAT, NO RICK! I'M NOT GONNA HAND YOU THE SCREWDRIVER! Uh, I'm never gonna hand you anything ever again, Rick.  I'm always helping you with this and that and the other thing. Www...what about me, Rick? Www... why can't you just help me out once, once, for once? | Morty |
+| Dad I would like you to tell me what's in the syringe. | Beth |
+
+**Takeaway:** Shorter utterances are harder to classify.

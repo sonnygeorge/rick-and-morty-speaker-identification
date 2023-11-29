@@ -28,6 +28,7 @@ RAW_SCRIPT_DATA_FPATH = os.path.join(_DATA_DIR, _RAW_SCRIPT_DATA_FNAME)
 TRAIN_DATA_FPATH = os.path.join(_DATA_DIR, _TRAIN_DATA_FNAME)
 DEV_DATA_FPATH = os.path.join(_DATA_DIR, _DEV_DATA_FNAME)
 TEST_DATA_FPATH = os.path.join(_DATA_DIR, _TEST_DATA_FNAME)
+RESULTS_CSV_FPATH = os.path.join(_DATA_DIR, "results.csv")
 
 RANDOM_SEED = 42
 
@@ -45,7 +46,6 @@ micro_f1_score = partial(f1_score, average="micro")
 SCORERS: Dict[str, Callable[[np.ndarray, np.ndarray], float]] = {
     "Accuracy": accuracy_score,
     "Macro F1": macro_f1_score,
-    "Micro F1": micro_f1_score,
 }
 
 START_TOKEN = "<START>"

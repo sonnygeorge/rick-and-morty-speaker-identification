@@ -65,6 +65,23 @@ def dashes_per_sentence(doc: Doc) -> Dict[str, float]:
 
 
 @feature_extractor
+def all_n_gram_one_hots(doc: Doc, n: int) -> Dict[str, float]:
+    """Extracts one-hot features for all n-grams in the input text."""
+    n_grams = convert_text_to_n_grams(doc.text, n)
+    return {f"'{ng}'": 1 for ng in n_grams}
+
+
+@feature_extractor
+def proportion_alpha_chars_capitalized(doc: Doc) -> Dict[str, float]:
+    """Extracts the percentage of alphabetic characters in the input text that are
+    capitalized.
+    """
+    alpha_chars = [char for char in doc.text if char.isalpha()]
+    n_capitalized = sum([char.isupper() for char in alpha_chars])
+    return {"percent_alpha_chars_capitalized": n_capitalized / len(alpha_chars)}
+
+
+@feature_extractor
 def avg_root_verb_embedding(doc: Doc, gensim_model_slug: str) -> Dict[str, float]:
     """Extracts the average embedding of all root verbs in the input text."""
     # Find all root verbs
@@ -128,12 +145,19 @@ def avg_non_proper_noun_embedding(doc: Doc, gensim_model_slug: str) -> Dict[str,
 
 
 @feature_extractor
-def most_characteristic_n_gram_counts(doc: Doc, num: int, n: int) -> Dict[str, float]:
+def most_characteristic_n_gram_counts(
+    doc: Doc, num: int, n: int, normalize: bool = False
+) -> Dict[str, float]:
     # TODO: Docstring
     characteristic_n_grams = get_most_characteristic_n_grams_in_training_data(num, n)
     doc_n_grams = convert_text_to_n_grams(doc.text, n)
     filtered_n_grams = [ng for ng in doc_n_grams if ng in characteristic_n_grams]
-    return {f"'{ng}'": count for ng, count in Counter(filtered_n_grams).items()}
+    if not normalize:
+        return {f"counts('{ng}')": ct for ng, ct in Counter(filtered_n_grams).items()}
+    normalized = {}
+    for n_gram in characteristic_n_grams:
+        normalized[n_gram] = filtered_n_grams.count(n_gram) / len(doc_n_grams)
+    return {f"norm'd_counts('{ng}')": ct for ng, ct in normalized.items()}
 
 
 @feature_extractor
@@ -144,7 +168,7 @@ def pos_tag_n_gram_counts(doc: Doc, n: int) -> Dict[str, float]:
     for start_idx in range(len(pos_tags) - n + 1):
         n_gram = " ".join(pos_tags[start_idx : start_idx + n])
         n_grams.append(n_gram)
-    return {f"'{ng}'": count for ng, count in Counter(n_grams).items()}
+    return {f"has('{ng}')": count for ng, count in Counter(n_grams).items()}
 
 
 @feature_extractor

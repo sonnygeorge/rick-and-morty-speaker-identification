@@ -19,6 +19,14 @@ from src.globals import (
 )
 
 
+class RickPredictor:
+    def fit(self, *args, **kwargs):
+        pass
+
+    def predict(self, X):
+        return ["Rick"] * len(X)
+
+
 @cache
 def load_data() -> (
     Tuple[
