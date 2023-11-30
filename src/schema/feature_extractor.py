@@ -102,10 +102,10 @@ def feature_extractor(func: FeatureExtractorWithDocArgOnly) -> FeatureExtractor:
         docs: "Optional[pd.Series[Doc]]" = None,
         **kwargs: Any,
     ) -> Dict[str, float]:
-        if doc is not None:
-            return func(doc, **kwargs)
-        elif docs is not None and index is not None:
+        if docs is not None and index is not None:
             doc = docs[index]
+            return func(doc, **kwargs)
+        elif doc is not None:
             return func(doc, **kwargs)
         # Else raise an error
         raise ValueError("Must take either `doc` or `index` and `docs`")

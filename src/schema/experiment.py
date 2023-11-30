@@ -23,8 +23,7 @@ class Experiment:
         previous_speakers: "pd.Series[str]",
         feature_extractors: Dict[str, Optional[FeatureExtractor]],
         spacy_model_name: str,  # Taken and stored for report
-        spacy_model_load_time: float,  # Taken and stored for report
-        avg_utterance_preprocessing_time: float,  # Taken and stored for report
+        use_by_episode_splits: bool,
         model_type: Type[BaseEstimator],
         name: Optional[str] = None,
         **model_kwargs,
@@ -35,8 +34,7 @@ class Experiment:
         self.previous_speakers = previous_speakers
         self.spacy_model_name = spacy_model_name
         self.feature_extractors = feature_extractors
-        self.spacy_model_load_time = spacy_model_load_time
-        self.avg_utterance_preprocessing_time = avg_utterance_preprocessing_time
+        self.use_by_episode_splits = use_by_episode_splits
         self.avg_feature_extraction_time = None
         self.model_type = model_type
         self.model = model_type(**model_kwargs)
@@ -45,6 +43,7 @@ class Experiment:
         self.dev_scores: Dict[str, float] = {}
         self.test_scores: Dict[str, float] = {}
         self.importances: Optional[pd.Series] = None
+        self.coefs: Optional[pd.Series] = None
         self.incorrect_texts: Optional[pd.Series] = None
         self.incorrect_preds: Optional[pd.Series] = None
         self.incorrect_labels: Optional[pd.Series] = None
@@ -84,12 +83,12 @@ class Experiment:
         for extractor_name, feature_extractor in self.feature_extractors.items():
             if extractor_name == "Previous Speaker":
                 prev_speaker = self.previous_speakers[idx]
-                if prev_speaker not in SANCHEZ_FAMILY_LABELS:
-                    if pd.isna(prev_speaker):
-                        prev_speaker = "None"
-                    else:
-                        prev_speaker = "Other"
-                extracted = {f"prev_speaker({self.previous_speakers[idx]})": 1}
+                # if prev_speaker not in SANCHEZ_FAMILY_LABELS:  # (This makes it worse)
+                #     if pd.isna(prev_speaker):
+                #         prev_speaker = "None"
+                #     else:
+                #         prev_speaker = "Other"
+                extracted = {f"prev_speaker({prev_speaker})": 1}
             else:
                 extracted = feature_extractor(doc)
             features.update(extracted)
@@ -149,6 +148,12 @@ class Experiment:
             self.importances = pd.Series(
                 self.model.feature_importances_, index=self.features.columns
             ).sort_values(ascending=False)
+        # Save coefficients if available
+        if hasattr(self.model, "coef_"):
+            self.coefs = pd.Series(
+                self.model.coef_[0], index=self.features.columns
+            )
+            print(self.coefs)
 
     def print_results(self) -> None:
         print(f"\n=== {self.name} Results ===\n")
@@ -169,18 +174,25 @@ class Experiment:
         for metric, score in self.test_scores.items():
             print(f"\t\t- {metric}: {score}")
         print("  - Times (s):")
-        print(f"\tAvg. SpaCy Processing: {self.avg_utterance_preprocessing_time:.3f}")
         print(f"\tAvg. Feature Extraction: {self.avg_feature_extraction_time:.4f}")
         print(f"\tModel Training: {self.model_train_time:.3f}")
-        print(f"\tSpaCy Model Load: {self.spacy_model_load_time:.3f}\n")
 
     def save_markdown_report(self) -> None:
         md = f"### 🚀 **{self.name}**\n\n"
-        md += f"- **Model Type 🤖** - \n\t{self.model_type}\n"
-        md += f"- **Number of Features 🧠** - \n\t{len(self.features.columns)}\n"
-        md += f"- **Model Train Time ⌛** - \n\t{self.model_train_time:.3f}\n"
+        md += f"- 🤖 **Model Type**: \n\t{self.model_type}\n"
+        dataset_used = "By Episode" if self.use_by_episode_splits else "Random"
+        md += f"- 📊 **Dataset Used**: \n\t_{dataset_used}_\n"
+        md += f"- 🧠 **Number of Features**: \n\t{len(self.features.columns)}\n"
+        if self.coefs is not None:
+            n_unused = len(self.coefs[self.coefs == 0])
+            md += f"- 🚫 **Unused Features**: \n\t{n_unused}/{len(self.coefs)}\n"
+        elif self.importances is not None:
+            n_unused = len(self.importances[self.importances == 0])
+            md += f"- 🚫 **Unused Features**: \n\t{n_unused}/{len(self.importances)}\n"
+        md += f"- ⌛ **Model Train Time**: \n\t{self.model_train_time:.3f}\n"
+        md += f"- 💬 **SpaCy Preprocessing Model**: - \n\t`{self.spacy_model_name}`\n"
         if self.model_params:
-            md += f"- **Model Hyperparameters 🧬**\n"
+            md += f"🧬 **Model Hyperparameters**:\n"
             for param, value in self.model_params.items():
                 md += f"\t- `{param}`: {value}\n"
         md += "\n"
@@ -234,6 +246,15 @@ class Experiment:
             else:
                 for feature, importance in importances[18:]:
                     md += f"| {feature} | {importance} |\n"
+        if self.coefs is not None:
+            unused_coefs = self.coefs[self.coefs == 0]
+            if len(unused_coefs) > 0:
+                md += "### 📉 Unused Features\n\n"
+                md += f"{len(unused_coefs)}/{len(self.coefs)} features were unused.\n\n"
+                md += "| Feature | Coefficient |\n"
+                md += "| ------- | ----------- |\n"
+                for feature, coef in unused_coefs.items():
+                    md += f"| {feature} | {coef} |\n"
         with open(os.path.join(DATA_DIR_PATH, f"{self.name}.md"), "w") as f:
             f.write(md)
 

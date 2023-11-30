@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 from collections import Counter
 import re
 
@@ -9,6 +9,9 @@ from src.schema.feature_extractor import feature_extractor
 from src.helpers import (
     load_embedding_model,
     convert_doc_to_n_grams,
+    get_neighborhoods_from_training_data,
+    cosine_similarity,
+    get_exponentially_decaying_weights,
 )
 from src.globals import (
     HAND_SELECTED_POS_BIGRAMS,
@@ -64,10 +67,36 @@ def dashes_per_sentence(doc: Doc) -> Dict[str, float]:
 
 
 @feature_extractor
-def all_n_gram_one_hots(doc: Doc, n: int) -> Dict[str, float]:
+def all_n_gram_one_hots(
+    doc: Doc, n: int, lemmatize: bool = False, append_depedency_labels: bool = False
+) -> Dict[str, float]:
     """Extracts one-hot features for all n-grams in the input text."""
-    n_grams = convert_doc_to_n_grams(doc, n)
-    return {f"has({ng})": 1 for ng in n_grams}
+    n_grams = convert_doc_to_n_grams(
+        doc, n, lemmatize=lemmatize, append_depedency_labels=append_depedency_labels
+    )
+    suffix = "_lem" if lemmatize else ""
+    suffix += "_dep" if append_depedency_labels else ""
+    return {f"has({ng}){suffix}": 1 for ng in n_grams}
+
+
+@feature_extractor
+def all_n_gram_counts(
+    doc: Doc,
+    n: int,
+    lemmatize: bool = False,
+    append_depedency_labels: bool = False,
+    normalize: bool = False,
+) -> Dict[str, float]:
+    """Extracts one-hot features for all n-grams in the input text."""
+    n_grams = convert_doc_to_n_grams(
+        doc, n, lemmatize=lemmatize, append_depedency_labels=append_depedency_labels
+    )
+    counts = Counter(n_grams)
+    if normalize:
+        counts = {n_gram: count / len(n_grams) for n_gram, count in counts.items()}
+    suffix = "_lem" if lemmatize else ""
+    suffix += "_dep" if append_depedency_labels else ""
+    return {f"count({ng}){suffix}": count for ng, count in counts.items()}
 
 
 @feature_extractor
@@ -187,3 +216,64 @@ def topical_proximity_score(
         )
     topic_str = topic_cluster.lower().replace(" ", "_")
     return {f"topical_proximity_{topic_str}": weighted_similarity}
+
+
+@feature_extractor
+def neighborhood_degrees_of_presence(
+    doc: Doc,
+    gensim_model_slug: str,
+    use_by_episode_split: bool,
+    lemmatize: bool = True,
+    max_top_n: Optional[int] = None,
+    normalize: bool = False,
+    weight_decay_rate: Optional[float] = None,
+    n_neighbors: int = 5,
+) -> Dict[str, float]:
+    # TODO: Docstring
+    suffix = "_norm" if lemmatize else ""
+    suffix += "_lem" if normalize else ""
+    neighborhoods = get_neighborhoods_from_training_data(
+        use_by_episode_split=use_by_episode_split,
+        n_neighbors=n_neighbors,
+        lemmatize=lemmatize,
+        gensim_model_slug=gensim_model_slug,
+    )
+    model = load_embedding_model(gensim_model_slug)
+    degrees_of_presence_by_neighborhood = {}
+    for word, neighborhood in neighborhoods.items():
+        feature_key = f"deg_of_presence({word}){suffix}"
+        cos_similarities = []
+        for token in doc:
+            if token.is_stop or token.is_punct or token.is_space:
+                continue
+            try:
+                token_embedding = model[token.text.lower()]
+            except KeyError:
+                continue
+            cos_similarity = cosine_similarity(token_embedding, neighborhood)
+            cos_similarities.append(cos_similarity)
+        if len(cos_similarities) == 0:
+            degrees_of_presence_by_neighborhood[feature_key] = 0.0
+            continue
+        highest_to_lowest_sims = sorted(cos_similarities, reverse=True)
+        if max_top_n is None:  # Mimicking an unlimited number of counts
+            filtered_high_to_low_similarities = highest_to_lowest_sims
+        else:  # Mimicking a limited number of possible counts
+            filtered_high_to_low_similarities = highest_to_lowest_sims[:max_top_n]
+        if weight_decay_rate is None:
+            weighted_similarities = filtered_high_to_low_similarities
+        else:
+            n_similarities = len(filtered_high_to_low_similarities)
+            weights = get_exponentially_decaying_weights(
+                n_weights=n_similarities,
+                decay_rate=weight_decay_rate,
+            )
+            weighted_similarities = [
+                sim * weight
+                for sim, weight in zip(filtered_high_to_low_similarities, weights)
+            ]
+        deg_of_presence = sum(weighted_similarities)
+        if normalize:
+            deg_of_presence /= n_similarities
+        degrees_of_presence_by_neighborhood[feature_key] = deg_of_presence
+    return degrees_of_presence_by_neighborhood
