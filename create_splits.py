@@ -1,5 +1,4 @@
 import os
-from typing import Literal
 
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -21,8 +20,8 @@ MIN_WORDS_IN_UTTERANCE = 6
 TEST_EPISODE_NOS = [3, 6, 8]
 DEV_EPISODE_NOS = [5, 7, 9]
 SPLIT_RATIOS = {
-    TRAIN_STR: 0.68,
-    DEV_STR: 0.19,
+    TRAIN_STR: 0.67,
+    DEV_STR: 0.20,
     TEST_STR: 0.13,
 }
 

@@ -1,7 +1,7 @@
 import os
 
 from src.initialize_experiments import initialize_experiments
-from src.config import CONFIGURED_EXPERIMENTS
+from src.config import EXPERIMENTS
 from src.globals import DATA_DIR_PATH, RESULTS_CSV_FNAME
 
 
@@ -14,12 +14,15 @@ def clean_dirs():
 
 def run_experiments():
     """Run all experiments and report results."""
-    # clean_dirs()
-    experiments = initialize_experiments(CONFIGURED_EXPERIMENTS)
+    clean_dirs()
+    experiments = initialize_experiments(EXPERIMENTS)
     # TODO: Add optional multiprocessing?
     for experiment in experiments:
-        experiment.run()
-        experiment.report_results()
+        try:
+            experiment.run()
+            experiment.report_results()
+        except Exception as e:
+            print(f"Error running experiment {experiment.name}: {e}")
 
 
 if __name__ == "__main__":

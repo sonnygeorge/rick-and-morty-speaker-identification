@@ -50,34 +50,16 @@ class Experiment:
         self.feature_names_by_extractor: Dict[str, Set[str]] = defaultdict(set)
         self.model_params = model_kwargs
         if name is None:
-            name = self._generate_name()
+            name = self._generate_base_name()
         self.name = name
 
-    def _generate_name(self) -> str:
-        """Generates a name for the experiment from its model & feature extractors."""
-
-        def is_other(s):
-            s = s.lower()
-            return not ("bedd" in s or "gram" in s or "topi" in s or "propor" in s)
-
-        all_features_str = "_".join(self.feature_extractors.keys()).lower()
+    def _generate_base_name(self) -> str:
+        """Generates a base name for the experiment from its model & feature extractors."""
         model_str = re.sub(r"[aeiou]", "", self.model_type.__name__)
-        name = f"{model_str}_{len(self.feature_extractors)}fs_("
-        if "gram" in all_features_str:
-            name += "ngrams+"
-        if "embedding" in all_features_str:
-            name += "vecs+"
-        if all_features_str.count("proportion") > 1:
-            name += "proportions+"
-        if all_features_str.count("topic") > 1:
-            name += "topics+"
-        if any(is_other(f) for f in self.feature_extractors.keys()) > 0:
-            name += "other+"
-        name = name[:-1] + ")"
-        return name
+        return f"{model_str}_{len(self.feature_extractors)}fs"
 
     def _extract_features_from_doc(self, idx: int) -> Dict[str, float]:
-        """Extracts features for an index."""
+        """Extracts features for an index of `self.docs`."""
         features = {}
         doc = self.docs[idx]
         for extractor_name, feature_extractor in self.feature_extractors.items():
@@ -98,7 +80,6 @@ class Experiment:
         return features
 
     def run(self) -> None:
-        """Runs the experiment."""
         print("🚀 Extracting features...")
         # Extract features
         start = perf_counter()
@@ -150,10 +131,7 @@ class Experiment:
             ).sort_values(ascending=False)
         # Save coefficients if available
         if hasattr(self.model, "coef_"):
-            self.coefs = pd.Series(
-                self.model.coef_[0], index=self.features.columns
-            )
-            print(self.coefs)
+            self.coefs = pd.Series(self.model.coef_[0], index=self.features.columns)
 
     def print_results(self) -> None:
         print(f"\n=== {self.name} Results ===\n")
@@ -190,9 +168,9 @@ class Experiment:
             n_unused = len(self.importances[self.importances == 0])
             md += f"- 🚫 **Unused Features**: \n\t{n_unused}/{len(self.importances)}\n"
         md += f"- ⌛ **Model Train Time**: \n\t{self.model_train_time:.3f}\n"
-        md += f"- 💬 **SpaCy Preprocessing Model**: - \n\t`{self.spacy_model_name}`\n"
+        md += f"- 💬 **SpaCy Preprocessing Model**: \n\t`{self.spacy_model_name}`\n\n"
         if self.model_params:
-            md += f"🧬 **Model Hyperparameters**:\n"
+            md += f"- 🧬 **Model Hyperparameters**:\n\n"
             for param, value in self.model_params.items():
                 md += f"\t- `{param}`: {value}\n"
         md += "\n"
@@ -253,8 +231,16 @@ class Experiment:
                 md += f"{len(unused_coefs)}/{len(self.coefs)} features were unused.\n\n"
                 md += "| Feature | Coefficient |\n"
                 md += "| ------- | ----------- |\n"
-                for feature, coef in unused_coefs.items():
+                unused_coefs = list(unused_coefs.items())
+                for feature, coef in unused_coefs[:18]:
                     md += f"| {feature} | {coef} |\n"
+                if len(unused_coefs) > 36:
+                    md += "| ... | ... |\n"
+                    for feature, coef in unused_coefs[-18:]:
+                        md += f"| {feature} | {coef} |\n"
+                else:
+                    for feature, coef in unused_coefs[18:]:
+                        md += f"| {feature} | {coef} |\n"
         with open(os.path.join(DATA_DIR_PATH, f"{self.name}.md"), "w") as f:
             f.write(md)
 

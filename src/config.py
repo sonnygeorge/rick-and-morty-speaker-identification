@@ -1,5 +1,6 @@
-from typing import Dict, List
+from typing import Dict, List, Union
 from functools import partial
+import random
 
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import (
@@ -31,16 +32,118 @@ from src.schema.configured_experiment import ConfiguredExperiment
 from src.helpers import RickPredictor
 from src.globals import RANDOM_SEED
 
-# TODO:
-# - Add vader or other rule-based sentiment analysis?
+random.seed(RANDOM_SEED)
 
-# - Augment data for underepresented classes
-# - Have bigger dev & test sets
-# - Try to better normalize some features to length?
-# - Write tests for feature extractors?
+_GENSIM_FEATURE_EXTRACTORS = {
+    "Topical Proximity - Dubiety ({gensim_model})": partial(
+        topical_proximity_score,
+        topic_cluster="Dubiety",
+    ),
+    "Topical Proximity - Death ({gensim_model})": partial(
+        topical_proximity_score,
+        topic_cluster="Death",
+    ),
+    "Topical Proximity - Sexual ({gensim_model})": partial(
+        topical_proximity_score,
+        topic_cluster="Sexual",
+    ),
+    "Topical Proximity - Condescension ({gensim_model})": partial(
+        topical_proximity_score,
+        topic_cluster="Condescension",
+    ),
+    "Topical Proximity - Intoxication ({gensim_model})": partial(
+        topical_proximity_score,
+        topic_cluster="Intoxication",
+    ),
+    "Topical Proximity - Gratitude ({gensim_model})": partial(
+        topical_proximity_score,
+        topic_cluster="Gratitude",
+    ),
+    "Topical Proximity - SciFi Creature ({gensim_model})": partial(
+        topical_proximity_score,
+        topic_cluster="SciFi Creature",
+    ),
+    "Topical Proximity - Generic Emotion ({gensim_model})": partial(
+        topical_proximity_score,
+        topic_cluster="Generic Emotion",
+    ),
+    "Topical Proximity - Fancy Science ({gensim_model})": partial(
+        topical_proximity_score,
+        topic_cluster="Fancy Science",
+    ),
+    "Topical Proximity - Food ({gensim_model})": partial(
+        topical_proximity_score,
+        topic_cluster="Food",
+    ),
+    "Nghbhood Degrees - Lemmas (no-decay,no-topn,5nghbrs)({gensim_model})(Rndm)": partial(
+        neighborhood_degrees_of_presence,
+        use_by_episode_split=False,
+        n_neighbors=5,
+        lemmatize=True,
+    ),
+    "Nghbhood Degrees - Full Tokens (no-decay,no-topn,5nghbrs)({gensim_model})(Rndm)": partial(
+        neighborhood_degrees_of_presence,
+        use_by_episode_split=False,
+        n_neighbors=5,
+        lemmatize=False,
+    ),
+    "Nghbhood Degrees - Lemmas (no-decay,4topn,5nghbrs)({gensim_model})(Rndm)": partial(
+        neighborhood_degrees_of_presence,
+        use_by_episode_split=False,
+        n_neighbors=5,
+        max_top_n=4,
+        lemmatize=True,
+    ),
+    "Nghbhood Degrees - Lemmas (no-decay,1topn,5nghbrs)({gensim_model})(Rndm)": partial(
+        neighborhood_degrees_of_presence,
+        use_by_episode_split=False,
+        n_neighbors=5,
+        max_top_n=1,
+        lemmatize=True,
+    ),
+    "Nghbhood Degrees - Lemmas (.5decay,no-topn,5nghbrs)({gensim_model})(Rndm)": partial(
+        neighborhood_degrees_of_presence,
+        use_by_episode_split=False,
+        weight_decay_rate=0.5,
+        n_neighbors=5,
+        lemmatize=True,
+    ),
+    "Nghbhood Degrees - Lemmas (.5decay,4topn,5nghbrs)({gensim_model})(Rndm)": partial(
+        neighborhood_degrees_of_presence,
+        use_by_episode_split=False,
+        weight_decay_rate=0.5,
+        max_top_n=4,
+        n_neighbors=5,
+        lemmatize=True,
+    ),
+    "Nghbhood Degrees - Lemmas (.5decay,1topn,5nghbrs)({gensim_model})(Rndm)": partial(
+        neighborhood_degrees_of_presence,
+        use_by_episode_split=False,
+        weight_decay_rate=0.5,
+        max_top_n=1,
+        n_neighbors=5,
+        lemmatize=True,
+    ),
+    "Average Root Verb Embedding ({gensim_model})": partial(avg_root_verb_embedding),
+}
+
+GENERATION_GENSIM_PARAMS = [
+    (0.3, "glove-twitter-25"),
+    (0.2, "glove-twitter-50"),
+    (0.2, "glove-wiki-gigaword-50"),
+    (0.3, "fasttext-wiki-news-subwords-300"),
+]
+
+# Hydrate gensim feature extractors with gensim model slugs
+GENSIM_FEATURE_EXTRACTORS = {}
+for _, gensim_model in GENERATION_GENSIM_PARAMS:
+    for name, fe in _GENSIM_FEATURE_EXTRACTORS.items():
+        new_name = name.format(gensim_model=gensim_model)
+        new_fe = partial(fe, gensim_model_slug=gensim_model)
+        GENSIM_FEATURE_EXTRACTORS[new_name] = new_fe
 
 
-FEATURE_EXTRACTORS: Dict[str, FeatureExtractor] = {
+OTHER_FEATURE_EXTRACTORS: Dict[str, FeatureExtractor] = {
     # "Length features"
     "Total Sentence Count": total_sentence_count,
     "Average Tokens Per Sentence": avg_tokens_per_sentence,
@@ -49,10 +152,6 @@ FEATURE_EXTRACTORS: Dict[str, FeatureExtractor] = {
     "Question Marks Per Sentence": question_marks_per_sentence,
     "Exclamation Marks Per Sentence": exclamation_marks_per_sentence,
     "Dashes Per Sentence": dashes_per_sentence,
-    # Average word embeddings
-    "Average Root Verb Embedding (glove-twitter-25)": partial(
-        avg_root_verb_embedding, gensim_model_slug="glove-twitter-25"
-    ),
     # N-Gram One Hots
     "All 1-Gram One Hots": partial(all_n_gram_one_hots, n=1),
     "All 2-Gram One Hots": partial(all_n_gram_one_hots, n=2),
@@ -91,209 +190,342 @@ FEATURE_EXTRACTORS: Dict[str, FeatureExtractor] = {
     "POS-Tag 1-Gram Counts": partial(pos_tag_n_gram_counts, n=1),
     "POS-Tag 2-Gram Counts": partial(pos_tag_n_gram_counts, n=2),
     "POS-Tag 3-Gram Counts": partial(pos_tag_n_gram_counts, n=3),
-    # Topical Proximity Scores
-    "Topical Proximity - Dubiety (glove-twitter-25)": partial(
-        topical_proximity_score,
-        gensim_model_slug="glove-twitter-25",
-        topic_cluster="Dubiety",
-    ),
-    "Topical Proximity - Death (glove-twitter-25)": partial(
-        topical_proximity_score,
-        gensim_model_slug="glove-twitter-25",
-        topic_cluster="Death",
-    ),
-    "Topical Proximity - Sexual (glove-twitter-25)": partial(
-        topical_proximity_score,
-        gensim_model_slug="glove-twitter-25",
-        topic_cluster="Sexual",
-    ),
-    "Topical Proximity - Condescension (glove-twitter-25)": partial(
-        topical_proximity_score,
-        gensim_model_slug="glove-twitter-25",
-        topic_cluster="Condescension",
-    ),
-    "Topical Proximity - Intoxication (glove-twitter-25)": partial(
-        topical_proximity_score,
-        gensim_model_slug="glove-twitter-25",
-        topic_cluster="Intoxication",
-    ),
-    "Topical Proximity - Gratitude (glove-twitter-25)": partial(
-        topical_proximity_score,
-        gensim_model_slug="glove-twitter-25",
-        topic_cluster="Gratitude",
-    ),
-    "Topical Proximity - SciFi Creature (glove-twitter-25)": partial(
-        topical_proximity_score,
-        gensim_model_slug="glove-twitter-25",
-        topic_cluster="SciFi Creature",
-    ),
-    "Topical Proximity - Generic Emotion (glove-twitter-25)": partial(
-        topical_proximity_score,
-        gensim_model_slug="glove-twitter-25",
-        topic_cluster="Generic Emotion",
-    ),
-    "Topical Proximity - Fancy Science (glove-twitter-25)": partial(
-        topical_proximity_score,
-        gensim_model_slug="glove-twitter-25",
-        topic_cluster="Fancy Science",
-    ),
-    "Topical Proximity - Food (glove-twitter-25)": partial(
-        topical_proximity_score,
-        gensim_model_slug="glove-twitter-25",
-        topic_cluster="Food",
-    ),
-    # Neighborhood degrees of presence
-    "Nghbhood Degrees - Lemmas (no-decay,no-topn,5nghbrs)(glove-twitter-25)(Epsd)": partial(
-        neighborhood_degrees_of_presence,
-        use_by_episode_split=False,
-        n_neighbors=5,
-        gensim_model_slug="glove-twitter-25",
-        lemmatize=True,
-    ),
-    "Nghbhood Degrees - Full Tokens (no-decay,no-topn,5nghbrs)(glove-twitter-25)(Epsd)": partial(
-        neighborhood_degrees_of_presence,
-        use_by_episode_split=False,
-        n_neighbors=5,
-        gensim_model_slug="glove-twitter-25",
-        lemmatize=False,
-    ),
-    "Nghbhood Degrees - Lemmas (no-decay,4topn,5nghbrs)(glove-twitter-25)(Epsd)": partial(
-        neighborhood_degrees_of_presence,
-        use_by_episode_split=False,
-        n_neighbors=5,
-        max_top_n=4,
-        gensim_model_slug="glove-twitter-25",
-        lemmatize=True,
-    ),
-    "Nghbhood Degrees - Lemmas (no-decay,1topn,5nghbrs)(glove-twitter-25)(Epsd)": partial(
-        neighborhood_degrees_of_presence,
-        use_by_episode_split=False,
-        n_neighbors=5,
-        max_top_n=1,
-        gensim_model_slug="glove-twitter-25",
-        lemmatize=True,
-    ),
-    "Nghbhood Degrees - Lemmas (.5decay,no-topn,5nghbrs)(glove-twitter-25)(Epsd)": partial(
-        neighborhood_degrees_of_presence,
-        use_by_episode_split=True,
-        weight_decay_rate=0.5,
-        n_neighbors=5,
-        gensim_model_slug="glove-twitter-25",
-        lemmatize=True,
-    ),
-    "Nghbhood Degrees - Lemmas (.5decay,4topn,5nghbrs)(glove-twitter-25)(Epsd)": partial(
-        neighborhood_degrees_of_presence,
-        use_by_episode_split=True,
-        weight_decay_rate=0.5,
-        max_top_n=4,
-        n_neighbors=5,
-        gensim_model_slug="glove-twitter-25",
-        lemmatize=True,
-    ),
-    "Nghbhood Degrees - Lemmas (.5decay,1topn,5nghbrs)(glove-twitter-25)(Epsd)": partial(
-        neighborhood_degrees_of_presence,
-        use_by_episode_split=True,
-        weight_decay_rate=0.5,
-        max_top_n=1,
-        n_neighbors=5,
-        gensim_model_slug="glove-twitter-25",
-        lemmatize=True,
-    ),
     # Other
     "Proportion Of Tokens That Are Stop Words": proportion_stop_words,
     "Proportion Of Chars That Are Capitalized": proportion_alpha_chars_capitalized,
-    # Previous speaker
+    # Previous speaker (no feature extractor since this is manually achieved by the experiment)
     "Previous Speaker": None,
 }
 
+FEATURE_EXTRACTORS = {**OTHER_FEATURE_EXTRACTORS, **GENSIM_FEATURE_EXTRACTORS}
 
-FEATURE_COMBOS_TO_TRY = [
-    [  # Best yet w/ LogReg (acc = approx. .6)
-        "All 1-Gram One Hots",
-        "Total Sentence Count",
-        "Average Tokens Per Sentence",
-        "Average Word Length",
-        "Exclamation Marks Per Sentence",
-        "Dashes Per Sentence",
-        "Proportion Of Tokens That Are Stop Words",
-        "Proportion Of Chars That Are Capitalized",
-        "Previous Speaker",
-    ],
+GENERATION_FEATURE_PARAMS = [
+    (0.95, [(1.0, "Total Sentence Count")]),
+    (0.95, [(1.0, "Average Tokens Per Sentence")]),
+    (0.95, [(1.0, "Average Word Length")]),
+    (0.95, [(1.0, "Question Marks Per Sentence")]),
+    (0.95, [(1.0, "Exclamation Marks Per Sentence")]),
+    (0.95, [(1.0, "Dashes Per Sentence")]),
+    (0.95, [(1.0, "Proportion Of Tokens That Are Stop Words")]),
+    (0.95, [(1.0, "Proportion Of Chars That Are Capitalized")]),
+    (0.55, [(1.0, "Average Root Verb Embedding ({gensim_model})")]),
+    (
+        0.96,
+        [
+            (
+                0.4,
+                [
+                    (0.1, "All 1-Gram One Hots (Lemmatized)"),
+                    (0.34, "All 1-Gram One Hots"),
+                    (0.06, "All 1-Gram One Hots (With Dependency Labels)"),
+                    (0.17, "All 1-Gram Counts"),
+                    (0.17, "All 1-Gram Counts (Lemmatized)"),
+                    (0.08, "All 1-Gram Counts (Normalized)"),
+                    (0.08, "All 1-Gram Counts (Lemmatized & Normalized)"),
+                ],
+            ),
+            (
+                0.6,
+                [
+                    (
+                        0.05,
+                        "Nghbhood Degrees - Lemmas (no-decay,no-topn,5nghbrs)({gensim_model})(Rndm)",
+                    ),
+                    (
+                        0.02,
+                        "Nghbhood Degrees - Full Tokens (no-decay,no-topn,5nghbrs)({gensim_model})(Rndm)",
+                    ),
+                    (
+                        0.13,
+                        "Nghbhood Degrees - Lemmas (no-decay,4topn,5nghbrs)({gensim_model})(Rndm)",
+                    ),
+                    (
+                        0.18,
+                        "Nghbhood Degrees - Lemmas (no-decay,1topn,5nghbrs)({gensim_model})(Rndm)",
+                    ),
+                    (
+                        0.7,
+                        "Nghbhood Degrees - Lemmas (.5decay,no-topn,5nghbrs)({gensim_model})(Rndm)",
+                    ),
+                    (
+                        0.3,
+                        "Nghbhood Degrees - Lemmas (.5decay,4topn,5nghbrs)({gensim_model})(Rndm)",
+                    ),
+                    (
+                        0.25,
+                        "Nghbhood Degrees - Lemmas (.5decay,1topn,5nghbrs)({gensim_model})(Rndm)",
+                    ),
+                ],
+            ),
+        ],
+    ),
+    (0.07, [(1.0, "Topical Proximity - Dubiety ({gensim_model})")]),
+    (0.07, [(1.0, "Topical Proximity - Death ({gensim_model})")]),
+    (0.1, [(1.0, "Topical Proximity - Sexual ({gensim_model})")]),
+    (0.13, [(1.0, "Topical Proximity - Condescension ({gensim_model})")]),
+    (0.13, [(1.0, "Topical Proximity - Intoxication ({gensim_model})")]),
+    (0.12, [(1.0, "Topical Proximity - Gratitude ({gensim_model})")]),
+    (0.08, [(1.0, "Topical Proximity - SciFi Creature ({gensim_model})")]),
+    (0.08, [(1.0, "Topical Proximity - Generic Emotion ({gensim_model})")]),
+    (0.13, [(1.0, "Topical Proximity - Fancy Science ({gensim_model})")]),
+    (0.08, [(1.0, "Topical Proximity - Food ({gensim_model})")]),
+    (
+        0.14,
+        [
+            (0.25, "All 2-Gram One Hots"),
+            (0.2, "All 2-Gram One Hots (Lemmatized)"),
+            (0.05, "All 2-Gram One Hots (With Dependency Labels)"),
+            (0.225, "All 2-Gram Counts"),
+            (0.125, "All 2-Gram Counts (Lemmatized)"),
+            (0.075, "All 2-Gram Counts (Normalized)"),
+            (0.075, "All 2-Gram Counts (Lemmatized & Normalized)"),
+        ],
+    ),
+    (0.1, [(1.0, "Hand-Selected POS-Tag N-Gram Counts")]),
+    (0.02, [(1.0, "POS-Tag 1-Gram Counts")]),
+    (0.01, [(1.0, "POS-Tag 2-Gram Counts")]),
+    (0.01, [(1.0, "POS-Tag 3-Gram Counts")]),
+]
+
+GENERATION_MODEL_PARAMS = [
+    (
+        0.01,
+        DecisionTreeClassifier,
+        {
+            "criterion": [(0.6, "gini"), (0.2, "entropy"), (0.2, "log_loss")],
+            "max_depth": [
+                (0.1, 3),
+                (0.2, 4),
+                (0.25, 5),
+                (0.25, 8),
+                (0.1, 11),
+                (0.05, 15),
+                (0.05, 20),
+            ],
+            "random_state": [(1.0, RANDOM_SEED)],
+        },
+    ),
+    (
+        0.03,
+        RandomForestClassifier,
+        {
+            "n_estimators": [(0.2, 45), (0.2, 60), (0.3, 80), (0.2, 140), (0.1, 220)],
+            "criterion": [(0.6, "gini"), (0.2, "entropy"), (0.2, "log_loss")],
+            "max_depth": [
+                (0.15, 3),
+                (0.25, 4),
+                (0.25, 5),
+                (0.25, 8),
+                (0.5, 11),
+                (0.05, 13),
+            ],
+            "random_state": [(1.0, RANDOM_SEED)],
+        },
+    ),
+    (
+        0.06,
+        GradientBoostingClassifier,
+        {
+            "n_estimators": [(0.2, 45), (0.2, 60), (0.3, 80), (0.2, 140), (0.1, 220)],
+            "learning_rate": [
+                (0.2, 0.1),
+                (0.2, 0.2),
+                (0.2, 0.3),
+                (0.2, 0.4),
+                (0.2, 0.5),
+            ],
+            "max_depth": [
+                (0.15, 3),
+                (0.25, 4),
+                (0.25, 5),
+                (0.25, 8),
+                (0.5, 11),
+                (0.05, 13),
+            ],
+            "random_state": [(1.0, RANDOM_SEED)],
+        },
+    ),
+    (
+        0.9,
+        LogisticRegression,
+        {
+            "penalty": [(0.3, "l1"), (0.3, "l2"), (0.4, "elasticnet")],
+            "C": [(0.1, 0.5), (0.2, 0.7), (0.32, 1.0), (0.3, 1.5), (0.08, 1.8)],
+            "solver": [(0.2, "lbfgs"), (0.2, "liblinear"), (0.6, "saga")],
+            "random_state": [(1.0, RANDOM_SEED)],
+        },
+    ),
+    (
+        0.0,
+        GaussianNB,
+        {
+            "var_smoothing": [
+                (0.2, 1e-9),
+                (0.2, 1e-8),
+                (0.2, 1e-7),
+                (0.2, 1e-6),
+                (0.2, 1e-5),
+            ],
+        },
+    ),
 ]
 
 
-CONFIGURED_EXPERIMENTS: List[ConfiguredExperiment] = [
-    # ConfiguredExperiment(
-    #     feature_extractor_names=["All 1-Gram One Hots"],
-    #     spacy_model_name="en_core_web_sm",
-    #     model_type=RickPredictor,
-    # ),
-    # ConfiguredExperiment(
-    #     feature_extractor_names=["All 1-Gram One Hots"],
-    #     spacy_model_name="en_core_web_sm",
-    #     model_type=LogisticRegression,
-    # ),
-    # ConfiguredExperiment(
-    #     feature_extractor_names=[
-    #         "Nghbhood Degrees - Lemmas (no-decay,no-topn,5nghbrs)(glove-twitter-25)(Epsd)"
-    #     ],
-    #     spacy_model_name="en_core_web_md",
-    #     use_by_episode_splits=True,
-    #     model_type=LogisticRegression,
-    #     random_state=RANDOM_SEED,
-    # ),
-    # ConfiguredExperiment(
-    #     feature_extractor_names=[
-    #         "Nghbhood Degrees - Full Tokens (no-decay,no-topn,5nghbrs)(glove-twitter-25)(Epsd)"
-    #     ],
-    #     spacy_model_name="en_core_web_md",
-    #     use_by_episode_splits=True,
-    #     model_type=LogisticRegression,
-    #     random_state=RANDOM_SEED,
-    # ),
-    # ConfiguredExperiment(
-    #     feature_extractor_names=[
-    #         "Nghbhood Degrees - Lemmas (no-decay,4topn,5nghbrs)(glove-twitter-25)(Epsd)"
-    #     ],
-    #     spacy_model_name="en_core_web_md",
-    #     use_by_episode_splits=True,
-    #     model_type=LogisticRegression,
-    #     random_state=RANDOM_SEED,
-    # ),
-    # ConfiguredExperiment(
-    #     feature_extractor_names=[
-    #         "Nghbhood Degrees - Lemmas (no-decay,1topn,5nghbrs)(glove-twitter-25)(Epsd)"
-    #     ],
-    #     spacy_model_name="en_core_web_md",
-    #     use_by_episode_splits=True,
-    #     model_type=LogisticRegression,
-    #     random_state=RANDOM_SEED,
-    # ),
+def generate_experiments(n: int) -> List[ConfiguredExperiment]:
+    """Generates n experiments using the generation parameters defined above."""
+
+    def _select_from_group(group: List[Union[tuple, list]]) -> Union[tuple, list]:
+        """Probabilistically select an item from a generation parameter group."""
+        weights = [item[0] for item in group]
+        selected_item = random.choices(group, weights=weights, k=1)[0]
+        return selected_item
+
+    experiments = []
+    for _ in range(n):
+        # Build a set of feature extractors
+        feature_combo = []
+        for prob, feature_extractor_group in GENERATION_FEATURE_PARAMS:
+            if random.random() > prob:
+                continue
+            selection = _select_from_group(feature_extractor_group)
+            if isinstance(selection[1], list):
+                selection = _select_from_group(selection[1])
+            feature_extractor_name: str = selection[1]
+            if "gensim_model" in feature_extractor_name:
+                gensim_model_slug = _select_from_group(GENERATION_GENSIM_PARAMS)[1]
+                feature_extractor_name = feature_extractor_name.format(
+                    gensim_model=gensim_model_slug
+                )
+            if feature_extractor_name not in FEATURE_EXTRACTORS:
+                raise ValueError(  # Liekly due to slight mismatch in manually typed string
+                    f"Feature extractor {feature_extractor_name} not found in `FEATURE_EXTRACTORS`."
+                )
+            feature_combo.append(feature_extractor_name)
+        # Generate model/model params
+        selection = _select_from_group(GENERATION_MODEL_PARAMS)
+        model_type = selection[1]
+        model_kwargs = {}
+        for param_name, param_group in selection[2].items():
+            model_kwargs[param_name] = _select_from_group(param_group)[1]
+        # Manually avoid some impossible parameter combinations
+        if model_type == LogisticRegression:
+            model_kwargs["max_iter"] = 1400
+            if model_kwargs["solver"] == "lbfgs":
+                model_kwargs["penalty"] = "l2"
+            if (
+                model_kwargs["solver"] == "liblinear"
+                and model_kwargs["penalty"] == "elasticnet"
+            ):
+                model_kwargs["penalty"] = "l2"
+            if model_kwargs["penalty"] == "elasticnet":
+                model_kwargs["l1_ratio"] = 0.5
+        # Append experiment
+        experiment = ConfiguredExperiment(
+            feature_extractor_names=feature_combo,
+            spacy_model_name="en_core_web_sm",
+            use_by_episode_splits=False,
+            model_type=model_type,
+            **model_kwargs,
+        )
+        experiments.append(experiment)
+    return experiments
+
+
+BASELINE_EXPERIMENTS: List[ConfiguredExperiment] = [
+    ConfiguredExperiment(
+        feature_extractor_names=["Total Sentence Count"],
+        spacy_model_name="en_core_web_sm",
+        use_by_episode_splits=False,
+        model_type=RickPredictor,
+    ),
+    ConfiguredExperiment(
+        feature_extractor_names=["All 1-Gram One Hots"],
+        spacy_model_name="en_core_web_sm",
+        use_by_episode_splits=False,
+        model_type=LogisticRegression,
+        penalty="l2",
+        C=0.7,
+        solver="saga",
+        max_iter=1400,
+        random_state=RANDOM_SEED,
+    ),
+]
+
+GENERATED_EXPERIMENTS = generate_experiments(5)
+
+KNOWN_GOOD_EXPERIMENTS = [
     ConfiguredExperiment(
         feature_extractor_names=[
-            "Nghbhood Degrees - Lemmas (.5decay,no-topn,5nghbrs)(glove-twitter-25)(Epsd)"
+            "Nghbhood Degrees - Lemmas (.5decay,4topn,5nghbrs)(glove-twitter-25)(Rndm)",
+            "Total Sentence Count",
+            "Average Tokens Per Sentence",
+            "Average Word Length",
+            "Exclamation Marks Per Sentence",
+            "Dashes Per Sentence",
+            "Proportion Of Tokens That Are Stop Words",
+            "Proportion Of Chars That Are Capitalized",
+            "Previous Speaker",
         ],
-        spacy_model_name="en_core_web_md",
-        use_by_episode_splits=True,
+        spacy_model_name="en_core_web_sm",
+        use_by_episode_splits=False,
         model_type=LogisticRegression,
         random_state=RANDOM_SEED,
     ),
     ConfiguredExperiment(
         feature_extractor_names=[
-            "Nghbhood Degrees - Lemmas (.5decay,4topn,5nghbrs)(glove-twitter-25)(Epsd)"
+            "Total Sentence Count",
+            "Average Tokens Per Sentence",
+            "Average Word Length",
+            "Exclamation Marks Per Sentence",
+            "Question Marks Per Sentence",
+            "Proportion Of Tokens That Are Stop Words",
+            "Nghbhood Degrees - Lemmas (no-decay,1topn,5nghbrs)(glove-twitter-50)(Rndm)",
+            "Topical Proximity - Fancy Science (glove-wiki-gigaword-50)",
         ],
-        spacy_model_name="en_core_web_md",
-        use_by_episode_splits=True,
+        spacy_model_name="en_core_web_sm",
+        use_by_episode_splits=False,
         model_type=LogisticRegression,
+        penalty="l2",
+        C=0.7,
+        solver="saga",
+        max_iter=1400,
         random_state=RANDOM_SEED,
     ),
     ConfiguredExperiment(
         feature_extractor_names=[
-            "Nghbhood Degrees - Lemmas (.5decay,1topn,5nghbrs)(glove-twitter-25)(Epsd)"
+            "Nghbhood Degrees - Lemmas (.5decay,1topn,5nghbrs)(glove-twitter-50)(Rndm)",
+            "Average Root Verb Embedding (fasttext-wiki-news-subwords-300)",
+            "All 2-Gram One Hots",
+            "Average Word Length",
+            "Proportion Of Tokens That Are Stop Words",
+            "Exclamation Marks Per Sentence",
+            "Dashes Per Sentence",
         ],
-        spacy_model_name="en_core_web_md",
-        use_by_episode_splits=True,
+        spacy_model_name="en_core_web_sm",
+        use_by_episode_splits=False,
+        model_type=GradientBoostingClassifier,
+        n_estimators=45,
+        learning_rate=0.2,
+        max_depth=5,
+        random_state=RANDOM_SEED,
+    ),
+    ConfiguredExperiment(
+        feature_extractor_names=[
+            "All 1-Gram One Hots",
+            "Total Sentence Count",
+            "Average Tokens Per Sentence",
+            "Average Word Length",
+            "Exclamation Marks Per Sentence",
+            "Dashes Per Sentence",
+            "Proportion Of Tokens That Are Stop Words",
+            "Proportion Of Chars That Are Capitalized",
+            "Previous Speaker",
+        ],
+        spacy_model_name="en_core_web_sm",
+        use_by_episode_splits=False,
         model_type=LogisticRegression,
         random_state=RANDOM_SEED,
     ),
 ]
+
+EXPERIMENTS = BASELINE_EXPERIMENTS + GENERATED_EXPERIMENTS + KNOWN_GOOD_EXPERIMENTS
