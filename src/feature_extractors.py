@@ -21,7 +21,7 @@ from src.globals import (
     TOKEN_BLACKLIST,
 )
 
-
+# TODO: Whithold family words/names from degrees of presence (pass as blacklist)?
 # TODO: Counts of entities (proxy for pop culture references)?
 # TODO: Counts of interjections?
 
