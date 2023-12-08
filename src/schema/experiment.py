@@ -9,9 +9,11 @@ import pandas as pd
 from spacy.tokens import Doc
 from sklearn.base import BaseEstimator
 from sklearn.feature_extraction import DictVectorizer
+from sklearn.metrics import classification_report
+from sklearn.preprocessing import LabelEncoder
 
 from src.schema.feature_extractor import FeatureExtractor
-from src.globals import SCORERS, RESULTS_CSV_FPATH, DATA_DIR_PATH, SANCHEZ_FAMILY_LABELS
+from src.globals import SCORERS, RESULTS_CSV_FPATH, DATA_DIR_PATH
 
 
 class Experiment:
@@ -29,7 +31,8 @@ class Experiment:
         **model_kwargs,
     ):
         self.docs = docs
-        self.labels = labels
+        self.label_encoder = LabelEncoder()
+        self.labels = pd.Series(self.label_encoder.fit_transform(labels))
         self.train_test_dev = train_test_dev
         self.previous_speakers = previous_speakers
         self.spacy_model_name = spacy_model_name
@@ -44,6 +47,8 @@ class Experiment:
         self.test_scores: Dict[str, float] = {}
         self.importances: Optional[pd.Series] = None
         self.coefs: Optional[pd.Series] = None
+        self.dev_classification_report: Optional[dict] = None
+        self.test_classification_report: Optional[dict] = None
         self.incorrect_texts: Optional[pd.Series] = None
         self.incorrect_preds: Optional[pd.Series] = None
         self.incorrect_labels: Optional[pd.Series] = None
@@ -85,7 +90,9 @@ class Experiment:
         start = perf_counter()
         feature_dicts = self.docs.index.map(self._extract_features_from_doc)
         self.avg_feature_extraction_time = (perf_counter() - start) / len(self.docs)
-        dict_vectorizer = DictVectorizer()
+        dict_vectorizer = (
+            DictVectorizer()
+        )  # FIXME: Fit transform on train only / transform others?
         self.features = pd.DataFrame(
             dict_vectorizer.fit_transform(feature_dicts).toarray(),
             index=self.docs.index,
@@ -126,12 +133,23 @@ class Experiment:
             self.test_scores[name] = np.round(scorer(test_labels, test_predictions), 3)
         # Save feature importances if available
         if hasattr(self.model, "feature_importances_"):
+            if len(self.model.feature_importances_.shape) > 1:
+                importances = np.mean(self.model.feature_importances_, axis=1)
+            else:
+                importances = self.model.feature_importances_
             self.importances = pd.Series(
-                self.model.feature_importances_, index=self.features.columns
+                importances, index=self.features.columns
             ).sort_values(ascending=False)
         # Save coefficients if available
         if hasattr(self.model, "coef_"):
             self.coefs = pd.Series(self.model.coef_[0], index=self.features.columns)
+        # Save classification reports
+        self.dev_classification_report = classification_report(
+            dev_labels, dev_predictions, output_dict=True
+        )
+        self.test_classification_report = classification_report(
+            test_labels, test_predictions, output_dict=True
+        )
 
     def print_results(self) -> None:
         print(f"\n=== {self.name} Results ===\n")
@@ -181,35 +199,56 @@ class Experiment:
             md += f"| {metric} | {train_score} | {self.dev_scores[metric]} | "
             md += f"{self.test_scores[metric]} |\n"
         md += "\n"
-        md += "### 🧠 Feature Extraction Methods\n\n"
-        if self.importances is not None:
-            md += "| Method | Importance |\n"
-            md += "| ------ | ---------- |\n"
-        else:
-            md += "| Method |\n"
-            md += "| ------ |\n"
-        if self.importances is None:
-            for extractor_name in self.feature_extractors.keys():
-                md += f"| {extractor_name} |\n"
-        else:
-            importances = {}
-            for extractor_name in self.feature_extractors.keys():
-                importance = self.importances[
-                    list(self.feature_names_by_extractor[extractor_name])
-                ].sum()
-                importances[extractor_name] = importance
-            sorted_importances = sorted(
-                importances.items(), key=lambda x: x[1], reverse=True
-            )
-            for extractor_name, importance in sorted_importances:
-                md += f"| {extractor_name} | {importance:.4f} |\n"
-        md += "### 🚫 Incorrect Predictions\n\n"
+        md += "#### Classification Report (Dev Set)\n\n"
+        md += "| Label | Precision | Recall | F1-Score |\n"
+        md += "| ----- | --------- | ------ | -------- |\n"
+        for label, report in self.dev_classification_report.items():
+            if label == "accuracy" or "avg" in label:
+                continue
+            decoded_lbl = self.label_encoder.inverse_transform([int(label)])[0]
+            md += f"| {decoded_lbl} | {report['precision']:.2f} | {report['recall']:.2f} | "
+            md += f"{report['f1-score']:.2f} |\n"
+        md += "\n#### Classification Report (Test Set)\n\n"
+        md += "| Label | Precision | Recall | F1-Score |\n"
+        md += "| ----- | --------- | ------ | -------- |\n"
+        for label, report in self.test_classification_report.items():
+            if label == "accuracy" or "avg" in label:
+                continue
+            decoded_lbl = self.label_encoder.inverse_transform([int(label)])[0]
+            md += f"| {decoded_lbl} | {report['precision']:.2f} | {report['recall']:.2f} | "
+            md += f"{report['f1-score']:.2f} |\n"
+        if len(self.feature_extractors) >= 1:
+            md += "\n### 🧠 Feature Extraction Methods\n\n"
+            if self.importances is not None:
+                md += "| Method | Importance |\n"
+                md += "| ------ | ---------- |\n"
+            else:
+                md += "| Method |\n"
+                md += "| ------ |\n"
+            if self.importances is None:
+                for extractor_name in self.feature_extractors.keys():
+                    md += f"| {extractor_name} |\n"
+            else:
+                importances = {}
+                for extractor_name in self.feature_extractors.keys():
+                    importance = self.importances[
+                        list(self.feature_names_by_extractor[extractor_name])
+                    ].sum()
+                    importances[extractor_name] = importance
+                sorted_importances = sorted(
+                    importances.items(), key=lambda x: x[1], reverse=True
+                )
+                for extractor_name, importance in sorted_importances:
+                    md += f"| {extractor_name} | {importance:.4f} |\n"
+        md += "\n### 🚫 Incorrect Predictions\n\n"
         md += "| Utterance | Predicted Speaker | Actual Speaker |\n"
         md += "| --------- | ----------------- | -------------- |\n"
         for text, pred, label in zip(
             self.incorrect_texts, self.incorrect_preds, self.incorrect_labels
         ):
-            md += f"| {text} | {pred} | {label} |\n"
+            pred_decoded_lbl = self.label_encoder.inverse_transform([int(pred)])[0]
+            true_decoded_lbl = self.label_encoder.inverse_transform([int(label)])[0]
+            md += f"| {text} | {pred_decoded_lbl} | {true_decoded_lbl} |\n"
         if self.importances is not None:
             md += "### 📉 Individual Feature Importances\n\n"
             md += "| Feature | Importance |\n"

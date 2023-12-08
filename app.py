@@ -14,6 +14,7 @@ IMG_URL = "https://variety.com/wp-content/uploads/2022/08/Rick-and-Morty-Season-
 
 RICK_ONLY_NAME = "Rick-Only"
 UNIGRAM_ONE_HOT_NAME = "Unigram One-Hot"
+MAX_TOP_N = 9
 
 
 _READABLE_NAME_MAP = {
@@ -22,6 +23,7 @@ _READABLE_NAME_MAP = {
     "RndmFrst": "Random Forest",
     "DcsnTr": "Decision Tree",
     "GssnNB": "Naive Bayes",
+    "XGBClssfr": "XGBoost",
 }
 
 _model_counts = {
@@ -30,14 +32,16 @@ _model_counts = {
     "RndmFrst": 0,
     "DcsnTr": 0,
     "GssnNB": 0,
+    "XGBClssfr": 0,
 }
 
 
 def get_readable_name(name: str) -> str:
     """Converts unreadable experiment names to human-readable names."""
+    print(name)
     if "RckPrdctr" in name:
         return RICK_ONLY_NAME
-    if "LgstcRgrssn" in name and "1fs" in name:
+    if "LgstcRgrssn" in name and "_1fs" in name:
         return UNIGRAM_ONE_HOT_NAME
     for model in _model_counts:
         if model in name:
@@ -46,16 +50,24 @@ def get_readable_name(name: str) -> str:
     raise ValueError(f"Unrecognized experiment name: {name}")
 
 
+# Load and manipulate results dataframe
 SCORES_DF = pd.read_csv(RESULTS_CSV_FPATH, index_col=0)
-SCORES_DF["number agnostic sortable index"] = SCORES_DF.index.str[:5]
-SCORES_DF = SCORES_DF.sort_values(by=["number agnostic sortable index", "Accuracy"])
-SCORES_DF = SCORES_DF.drop(columns=["number agnostic sortable index"])
+N_EXPERIMENTS = len(SCORES_DF)
 _readable_names = SCORES_DF.index.map(get_readable_name)
 NAME_MAP = {new: old for new, old in zip(_readable_names, SCORES_DF.index)}
 SCORES_DF.index = _readable_names
-_rows_to_move = SCORES_DF.loc[[RICK_ONLY_NAME, UNIGRAM_ONE_HOT_NAME]]
-_remaining_rows = SCORES_DF.drop([RICK_ONLY_NAME, UNIGRAM_ONE_HOT_NAME])
-SCORES_DF = pd.concat([_rows_to_move, _remaining_rows])
+NEW_SCORES_DF = pd.DataFrame()
+for substring in list(_READABLE_NAME_MAP.values()) + [
+    RICK_ONLY_NAME,
+    UNIGRAM_ONE_HOT_NAME,
+]:
+    subgroup = SCORES_DF[SCORES_DF.index.str.contains(substring)]
+    top_rows = subgroup.sort_values(by="Accuracy", ascending=False).head(MAX_TOP_N)
+    NEW_SCORES_DF = pd.concat([NEW_SCORES_DF, top_rows])
+SCORES_DF = NEW_SCORES_DF
+SCORES_DF["number agnostic sortable index"] = SCORES_DF.index.str[:5]
+SCORES_DF = SCORES_DF.sort_values(by=["number agnostic sortable index", "Accuracy"])
+SCORES_DF = SCORES_DF.drop(columns=["number agnostic sortable index"])
 
 
 COLORS = {
@@ -64,11 +76,12 @@ COLORS = {
     "Logistic Regression": "dimgray",
     "Naive Bayes": "darkolivegreen",
     "Random Forest": "darkslategray",
+    "XGBoost": "dimgray",
 }
 
 
 def plot_scores():
-    # Remove Rick-Only and Unigram One-Hot baselines
+    # Remove Rick-Only and Unigram One-Hot baselines from df
     df = SCORES_DF.drop([RICK_ONLY_NAME, UNIGRAM_ONE_HOT_NAME])
     # Create basic plot
     ax = df.plot(kind="bar", legend=True, figsize=(9, 6))
@@ -80,11 +93,7 @@ def plot_scores():
     # Find max values for each category
     max_values = df.max()
     # Prepare colors for x labels
-    x_label_colors = []
-    for name in df.index:
-        if name == RICK_ONLY_NAME or name == UNIGRAM_ONE_HOT_NAME:
-            continue
-        x_label_colors.append("dimgray")
+    x_label_colors = ["dimgray"] * len(df)
     # Iterate over the bars
     n_rows = len(df)
     font_size = 4.5 if n_rows > 15 else 5.6
@@ -110,16 +119,18 @@ def plot_scores():
             fontsize=font_size,
             rotation=90,
             color="black",
-            path_effects=[withStroke(linewidth=shadow_width, foreground=shadow_color, alpha=alpha)],
+            path_effects=[
+                withStroke(linewidth=shadow_width, foreground=shadow_color, alpha=alpha)
+            ],
         )
+        # Set the x label and shadow for this group of bars
         if i < len(x_label_colors):
             color = "black" if is_max else x_label_colors[i]
-            # Set the x label color for this group
             ax.get_xticklabels()[i].set_color(color)
-            # Set the shadow color for this group
-            ax.get_xticklabels()[i].set_path_effects(
-                [withStroke(linewidth=shadow_width, foreground=shadow_color, alpha=alpha)]
+            with_stroke = withStroke(
+                linewidth=shadow_width, foreground=shadow_color, alpha=alpha
             )
+            ax.get_xticklabels()[i].set_path_effects([with_stroke])
 
     # Add benchmark lines
     for y, color, linestyle, alpha in [
@@ -166,6 +177,7 @@ def plot_scores():
 
 
 def handle_experiment_selection(selection):
+    """Handle the user's selection of an experiment."""
     name = NAME_MAP[selection]
     try:
         with open(os.path.join(DATA_DIR_PATH, f"{name}.md"), "r") as f:
@@ -174,10 +186,12 @@ def handle_experiment_selection(selection):
         st.markdown("No experiment description found.")
 
 
+# Declare Streamlit app
 st.title("Sanchez Family Classifier")
 st.image(IMG_URL)
 st.divider()
-st.header("Comparison of All Experiment Results")
+st.header("Comparison of Top Experiment Results")
+st.text(f"Number of experiments run: {N_EXPERIMENTS}")
 st.pyplot(plot_scores())
 st.divider()
 st.header("Explore Experiments")

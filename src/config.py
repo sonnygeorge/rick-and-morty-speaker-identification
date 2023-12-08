@@ -9,6 +9,10 @@ from sklearn.ensemble import (
 )
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import GaussianNB
+from sklearn.metrics import f1_score
+from xgboost import XGBClassifier
+
+import rich
 
 from src.feature_extractors import (
     total_sentence_count,
@@ -30,7 +34,7 @@ from src.feature_extractors import (
 from src.schema.feature_extractor import FeatureExtractor
 from src.schema.configured_experiment import ConfiguredExperiment
 from src.helpers import RickPredictor
-from src.globals import RANDOM_SEED
+from src.globals import RANDOM_SEED, FAMILIAL_WORDS_AND_COMMON_NAMES
 
 random.seed(RANDOM_SEED)
 
@@ -75,40 +79,40 @@ _GENSIM_FEATURE_EXTRACTORS = {
         topical_proximity_score,
         topic_cluster="Food",
     ),
-    "Nghbhood Degrees - Lemmas (no-decay,no-topn,5nghbrs)({gensim_model})(Rndm)": partial(
+    "Nghbhood Degrees - Lemmas (no-decay,no-topn,5nghbrs)({gensim_model})(Rndm){blacklist}": partial(
         neighborhood_degrees_of_presence,
         use_by_episode_split=False,
         n_neighbors=5,
         lemmatize=True,
     ),
-    "Nghbhood Degrees - Full Tokens (no-decay,no-topn,5nghbrs)({gensim_model})(Rndm)": partial(
+    "Nghbhood Degrees - Full Tokens (no-decay,no-topn,5nghbrs)({gensim_model})(Rndm){blacklist}": partial(
         neighborhood_degrees_of_presence,
         use_by_episode_split=False,
         n_neighbors=5,
         lemmatize=False,
     ),
-    "Nghbhood Degrees - Lemmas (no-decay,4topn,5nghbrs)({gensim_model})(Rndm)": partial(
+    "Nghbhood Degrees - Lemmas (no-decay,4topn,5nghbrs)({gensim_model})(Rndm){blacklist}": partial(
         neighborhood_degrees_of_presence,
         use_by_episode_split=False,
         n_neighbors=5,
         max_top_n=4,
         lemmatize=True,
     ),
-    "Nghbhood Degrees - Lemmas (no-decay,1topn,5nghbrs)({gensim_model})(Rndm)": partial(
+    "Nghbhood Degrees - Lemmas (no-decay,1topn,5nghbrs)({gensim_model})(Rndm){blacklist}": partial(
         neighborhood_degrees_of_presence,
         use_by_episode_split=False,
         n_neighbors=5,
         max_top_n=1,
         lemmatize=True,
     ),
-    "Nghbhood Degrees - Lemmas (.5decay,no-topn,5nghbrs)({gensim_model})(Rndm)": partial(
+    "Nghbhood Degrees - Lemmas (.5decay,no-topn,5nghbrs)({gensim_model})(Rndm){blacklist}": partial(
         neighborhood_degrees_of_presence,
         use_by_episode_split=False,
         weight_decay_rate=0.5,
         n_neighbors=5,
         lemmatize=True,
     ),
-    "Nghbhood Degrees - Lemmas (.5decay,4topn,5nghbrs)({gensim_model})(Rndm)": partial(
+    "Nghbhood Degrees - Lemmas (.5decay,4topn,5nghbrs)({gensim_model})(Rndm){blacklist}": partial(
         neighborhood_degrees_of_presence,
         use_by_episode_split=False,
         weight_decay_rate=0.5,
@@ -116,7 +120,7 @@ _GENSIM_FEATURE_EXTRACTORS = {
         n_neighbors=5,
         lemmatize=True,
     ),
-    "Nghbhood Degrees - Lemmas (.5decay,1topn,5nghbrs)({gensim_model})(Rndm)": partial(
+    "Nghbhood Degrees - Lemmas (.5decay,1topn,5nghbrs)({gensim_model})(Rndm){blacklist}": partial(
         neighborhood_degrees_of_presence,
         use_by_episode_split=False,
         weight_decay_rate=0.5,
@@ -137,10 +141,25 @@ GENERATION_GENSIM_PARAMS = [
 # Hydrate gensim feature extractors with gensim model slugs
 GENSIM_FEATURE_EXTRACTORS = {}
 for _, gensim_model in GENERATION_GENSIM_PARAMS:
-    for name, fe in _GENSIM_FEATURE_EXTRACTORS.items():
-        new_name = name.format(gensim_model=gensim_model)
-        new_fe = partial(fe, gensim_model_slug=gensim_model)
-        GENSIM_FEATURE_EXTRACTORS[new_name] = new_fe
+    for name, feature_extractor in _GENSIM_FEATURE_EXTRACTORS.items():
+        if "{blacklist}" in name:
+            for use_blacklist, blacklist_string in [
+                (False, ""),
+                (True, "(-blacklist)"),
+            ]:
+                new_name = name.format(
+                    gensim_model=gensim_model, blacklist=blacklist_string
+                )
+                new_fe = partial(
+                    feature_extractor,
+                    gensim_model_slug=gensim_model,
+                    use_blacklist=use_blacklist,
+                )
+                GENSIM_FEATURE_EXTRACTORS[new_name] = new_fe
+        else:
+            new_name = name.format(gensim_model=gensim_model)
+            new_fe = partial(feature_extractor, gensim_model_slug=gensim_model)
+            GENSIM_FEATURE_EXTRACTORS[new_name] = new_fe
 
 
 OTHER_FEATURE_EXTRACTORS: Dict[str, FeatureExtractor] = {
@@ -153,7 +172,13 @@ OTHER_FEATURE_EXTRACTORS: Dict[str, FeatureExtractor] = {
     "Exclamation Marks Per Sentence": exclamation_marks_per_sentence,
     "Dashes Per Sentence": dashes_per_sentence,
     # N-Gram One Hots
+    "Familial Words & Common Names 1-Gram One Hots": partial(
+        all_n_gram_one_hots, n=1, whitelist=FAMILIAL_WORDS_AND_COMMON_NAMES
+    ),
     "All 1-Gram One Hots": partial(all_n_gram_one_hots, n=1),
+    "All 1-Gram One Hots (-blacklist)": partial(
+        all_n_gram_one_hots, n=1, use_blacklist=True
+    ),
     "All 2-Gram One Hots": partial(all_n_gram_one_hots, n=2),
     # Lemmatized N-Gram One Hots
     "All 1-Gram One Hots (Lemmatized)": partial(
@@ -170,7 +195,13 @@ OTHER_FEATURE_EXTRACTORS: Dict[str, FeatureExtractor] = {
         all_n_gram_one_hots, n=2, append_depedency_labels=True
     ),
     # N-Gram Counts
+    "Familial Words & Common Names 1-Gram Counts": partial(
+        all_n_gram_counts, n=1, whitelist=FAMILIAL_WORDS_AND_COMMON_NAMES
+    ),
     "All 1-Gram Counts": partial(all_n_gram_counts, n=1),
+    "All 1-Gram Counts (-blacklist)": partial(
+        all_n_gram_counts, n=1, use_blacklist=True
+    ),
     "All 2-Gram Counts": partial(all_n_gram_counts, n=2),
     # Lemmatized N-Gram Counts
     "All 1-Gram Counts (Lemmatized)": partial(all_n_gram_counts, n=1, lemmatize=True),
@@ -198,6 +229,7 @@ OTHER_FEATURE_EXTRACTORS: Dict[str, FeatureExtractor] = {
 }
 
 FEATURE_EXTRACTORS = {**OTHER_FEATURE_EXTRACTORS, **GENSIM_FEATURE_EXTRACTORS}
+print("Number of unique feature extractors:", len(FEATURE_EXTRACTORS))
 
 GENERATION_FEATURE_PARAMS = [
     (0.95, [(1.0, "Total Sentence Count")]),
@@ -216,16 +248,18 @@ GENERATION_FEATURE_PARAMS = [
                 0.4,
                 [
                     (0.1, "All 1-Gram One Hots (Lemmatized)"),
-                    (0.34, "All 1-Gram One Hots"),
+                    (0.17, "All 1-Gram One Hots"),
+                    (0.17, "All 1-Gram One Hots (-blacklist)"),
                     (0.06, "All 1-Gram One Hots (With Dependency Labels)"),
-                    (0.17, "All 1-Gram Counts"),
+                    (0.8, "All 1-Gram Counts"),
+                    (0.9, "All 1-Gram Counts (-blacklist)"),
                     (0.17, "All 1-Gram Counts (Lemmatized)"),
                     (0.08, "All 1-Gram Counts (Normalized)"),
                     (0.08, "All 1-Gram Counts (Lemmatized & Normalized)"),
                 ],
             ),
             (
-                0.6,
+                0.3,
                 [
                     (
                         0.05,
@@ -254,6 +288,39 @@ GENERATION_FEATURE_PARAMS = [
                     (
                         0.25,
                         "Nghbhood Degrees - Lemmas (.5decay,1topn,5nghbrs)({gensim_model})(Rndm)",
+                    ),
+                ],
+            ),
+            (
+                0.3,
+                [
+                    (
+                        0.05,
+                        "Nghbhood Degrees - Lemmas (no-decay,no-topn,5nghbrs)({gensim_model})(Rndm)(-blacklist)",
+                    ),
+                    (
+                        0.02,
+                        "Nghbhood Degrees - Full Tokens (no-decay,no-topn,5nghbrs)({gensim_model})(Rndm)(-blacklist)",
+                    ),
+                    (
+                        0.13,
+                        "Nghbhood Degrees - Lemmas (no-decay,4topn,5nghbrs)({gensim_model})(Rndm)(-blacklist)",
+                    ),
+                    (
+                        0.18,
+                        "Nghbhood Degrees - Lemmas (no-decay,1topn,5nghbrs)({gensim_model})(Rndm)(-blacklist)",
+                    ),
+                    (
+                        0.7,
+                        "Nghbhood Degrees - Lemmas (.5decay,no-topn,5nghbrs)({gensim_model})(Rndm)(-blacklist)",
+                    ),
+                    (
+                        0.3,
+                        "Nghbhood Degrees - Lemmas (.5decay,4topn,5nghbrs)({gensim_model})(Rndm)(-blacklist)",
+                    ),
+                    (
+                        0.25,
+                        "Nghbhood Degrees - Lemmas (.5decay,1topn,5nghbrs)({gensim_model})(Rndm)(-blacklist)",
                     ),
                 ],
             ),
@@ -287,6 +354,16 @@ GENERATION_FEATURE_PARAMS = [
     (0.01, [(1.0, "POS-Tag 3-Gram Counts")]),
 ]
 
+
+# Lazily thrown here to use specifically as an `eval_metric`` for XGBoost."""
+def f1_macro(preds, dtrain):
+    labels = dtrain.get_label()
+    preds = preds.reshape(-1, 5)  # Reshape predictions (5 classes)
+    preds = preds.argmax(axis=1)  # Take the argmax to get prediction labels
+    f1 = f1_score(labels, preds, average="macro")
+    return "macroF1", f1
+
+
 GENERATION_MODEL_PARAMS = [
     (
         0.01,
@@ -303,6 +380,53 @@ GENERATION_MODEL_PARAMS = [
                 (0.05, 20),
             ],
             "random_state": [(1.0, RANDOM_SEED)],
+        },
+    ),
+    (
+        0.9,
+        XGBClassifier,
+        {
+            "random_state": [(1.0, RANDOM_SEED)],
+            "max_depth": [(0.2, 3), (0.6, 4), (0.1, 5), (0.05, 6)],
+            "objective": [(0.5, "multi:softmax"), (0.5, "multi:softprob")],
+            "num_class": [(1, 5)],
+            "n_estimators": [(0.2, 45), (0.2, 60), (0.3, 80), (0.2, 100), (0.1, 137)],
+            # Minimum sum of instance weight needed in a child
+            "min_child_weight": [(0.5, 1), (0.3, 2), (0.1, 3), (0.1, 4)],
+            # Minimum loss reduction required to make a further partition on a leaf node
+            "gamma": [(0.3, 0.05), (0.3, 0.1), (0.1, 0.2), (0.1, 0.3), (0.1, 0.4)],
+            # Subsample ratio of the training instances
+            "subsample": [(0.1, 0.5), (0.1, 0.6), (0.1, 0.8), (0.5, 0.8), (0.1, 0.9)],
+            # Subsample ratio of columns when constructing each tree
+            "colsample_bytree": [
+                (0.1, 0.5),
+                (0.1, 0.6),
+                (0.1, 0.8),
+                (0.5, 0.8),
+                (0.1, 0.9),
+            ],
+            # L2 regularization term on weights
+            "reg_lambda": [(0.1, 0.6), (0.1, 0.8), (0.6, 1), (0.2, 1.4)],
+            # L1 regularization term on weights
+            "reg_alpha": [(0.7, 0.1), (0.15, 0.3), (0.15, 5)],
+            "learning_rate": [
+                (0.3, 0.1),
+                (0.2, 0.2),
+                (0.2, 0.3),
+                (0.2, 0.4),
+                (0.1, 0.5),
+            ],
+            # L1 regularization
+            "alpha": [(0.2, 0.5), (0.3, 0.8), (0.3, 1.2), (0.2, 1.8)],
+            # ...
+            "booster": [(0.5, "gbtree"), (0.4, "gblinear"), (0.1, "dart")],
+            "eta": [(0.2, 0.15), (0.2, 0.2), (0.2, 0.3), (0.2, 0.4), (0.2, 0.55)],
+            "eval_metric": [
+                (0.4, f1_macro),
+                (0.2, "mlogloss"),
+                (0.3, "map"),
+                (0.1, "mphe"),
+            ],
         },
     ),
     (
@@ -401,6 +525,16 @@ def generate_experiments(n: int) -> List[ConfiguredExperiment]:
                     f"Feature extractor {feature_extractor_name} not found in `FEATURE_EXTRACTORS`."
                 )
             feature_combo.append(feature_extractor_name)
+        if any("Nghbhood Degrees" in fe_name for fe_name in feature_combo):
+            p_add_familial_words = 0.95
+            if random.random() < p_add_familial_words:
+                p_one_hots = 0.5
+                if random.random() < p_one_hots:
+                    feature_combo.append(
+                        "Familial Words & Common Names 1-Gram One Hots"
+                    )
+                else:
+                    feature_combo.append("Familial Words & Common Names 1-Gram Counts")
         # Generate model/model params
         selection = _select_from_group(GENERATION_MODEL_PARAMS)
         model_type = selection[1]
@@ -419,7 +553,7 @@ def generate_experiments(n: int) -> List[ConfiguredExperiment]:
                 model_kwargs["penalty"] = "l2"
             if model_kwargs["penalty"] == "elasticnet":
                 model_kwargs["l1_ratio"] = 0.5
-        # Append experiment
+        # Append generated experiment
         experiment = ConfiguredExperiment(
             feature_extractor_names=feature_combo,
             spacy_model_name="en_core_web_sm",
@@ -451,9 +585,40 @@ BASELINE_EXPERIMENTS: List[ConfiguredExperiment] = [
     ),
 ]
 
-GENERATED_EXPERIMENTS = generate_experiments(5)
-
-KNOWN_GOOD_EXPERIMENTS = [
+MANUALLY_CONFIGURED_EXPERIMENTS = [
+    ConfiguredExperiment(
+        feature_extractor_names=[
+            "Nghbhood Degrees - Lemmas (.5decay,4topn,5nghbrs)(glove-wiki-gigaword-50)(Rndm)(-blacklist)",
+            "Familial Words & Common Names 1-Gram Counts",
+            "Total Sentence Count",
+            "Average Tokens Per Sentence",
+            "Average Word Length",
+            "Exclamation Marks Per Sentence",
+            "Dashes Per Sentence",
+            "Proportion Of Tokens That Are Stop Words",
+            "Proportion Of Chars That Are Capitalized",
+            "Topical Proximity - Fancy Science (glove-wiki-gigaword-50)",
+            "Topical Proximity - Condenscension (glove-wiki-gigaword-50)",
+            "Topical Proximity - Intoxication (glove-wiki-gigaword-50)",
+            "Average Root Verb Embedding (glove-wiki-gigaword-50)",
+        ],
+        spacy_model_name="en_core_web_sm",
+        use_by_episode_splits=False,
+        model_type=XGBClassifier,
+        random_state=RANDOM_SEED,
+        n_estimators=45,
+        max_depth=4,  # Maximum tree depth for base learners
+        min_child_weight=1,  # Minimum sum of instance weight (hessian) needed in a child
+        gamma=0.1,  # Minimum loss reduction required to make a further partition on a leaf node
+        subsample=0.8,  # Subsample ratio of the training instances
+        colsample_bytree=0.8,  # Subsample ratio of columns when constructing each tree
+        reg_lambda=1,  # L2 regularization term on weights
+        reg_alpha=0.1,  # L1 regularization term on weights
+        learning_rate=0.01,  # Learning rate
+        n_estimators=100,  # Number of gradient boosted trees
+        objective="multi:softprob",  # Multiclass classification
+        num_class=5,  # Number of classes
+    ),
     ConfiguredExperiment(
         feature_extractor_names=[
             "Nghbhood Degrees - Lemmas (.5decay,4topn,5nghbrs)(glove-twitter-25)(Rndm)",
@@ -509,23 +674,13 @@ KNOWN_GOOD_EXPERIMENTS = [
         max_depth=5,
         random_state=RANDOM_SEED,
     ),
-    ConfiguredExperiment(
-        feature_extractor_names=[
-            "All 1-Gram One Hots",
-            "Total Sentence Count",
-            "Average Tokens Per Sentence",
-            "Average Word Length",
-            "Exclamation Marks Per Sentence",
-            "Dashes Per Sentence",
-            "Proportion Of Tokens That Are Stop Words",
-            "Proportion Of Chars That Are Capitalized",
-            "Previous Speaker",
-        ],
-        spacy_model_name="en_core_web_sm",
-        use_by_episode_splits=False,
-        model_type=LogisticRegression,
-        random_state=RANDOM_SEED,
-    ),
 ]
 
-EXPERIMENTS = BASELINE_EXPERIMENTS + GENERATED_EXPERIMENTS + KNOWN_GOOD_EXPERIMENTS
+GENERATED_EXPERIMENTS = generate_experiments(30)
+
+EXPERIMENTS = (
+    BASELINE_EXPERIMENTS + MANUALLY_CONFIGURED_EXPERIMENTS + GENERATED_EXPERIMENTS
+)
+
+for experiment in EXPERIMENTS:
+    rich.inspect(experiment)

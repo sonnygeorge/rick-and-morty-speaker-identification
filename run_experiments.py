@@ -14,7 +14,7 @@ def clean_dirs():
 
 def run_experiments():
     """Run all experiments and report results."""
-    clean_dirs()
+    # clean_dirs()
     experiments = initialize_experiments(EXPERIMENTS)
     # TODO: Add optional multiprocessing?
     for experiment in experiments:

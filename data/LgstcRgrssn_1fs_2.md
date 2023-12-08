@@ -1,4 +1,4 @@
-### 🚀 **LgstcRgrssn_1fs_1**
+### 🚀 **LgstcRgrssn_1fs_2**
 
 - 🤖 **Model Type**: 
 	<class 'sklearn.linear_model._logistic.LogisticRegression'>
@@ -9,7 +9,7 @@
 - 🚫 **Unused Features**: 
 	318/1371
 - ⌛ **Model Train Time**: 
-	0.934
+	0.955
 - 💬 **SpaCy Preprocessing Model**: 
 	`en_core_web_sm`
 

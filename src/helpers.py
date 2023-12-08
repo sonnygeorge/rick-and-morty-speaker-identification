@@ -1,7 +1,7 @@
 from time import perf_counter
 import os
 
-from typing import List, Tuple, Literal, Dict, Set
+from typing import List, Tuple, Literal, Dict, Union
 from functools import cache
 
 from gensim.models import KeyedVectors
@@ -28,7 +28,7 @@ class RickPredictor:
         pass
 
     def predict(self, X):
-        return ["Rick"] * len(X)
+        return [3] * len(X)  # Rick is encoded as 2
 
 
 @cache
@@ -124,7 +124,7 @@ def convert_doc_to_n_grams(
     n: int,
     lemmatize: bool = False,
     append_depedency_labels: bool = False,
-) -> List[Tuple[str]]:
+) -> Union[List[Tuple[str]], List[str]]:
     """Converts a SpaCy Doc to a list of n-grams.
 
     Args:
@@ -156,9 +156,6 @@ def convert_doc_to_n_grams(
             n_gram = " ".join(token_strings[start_idx : start_idx + n])
             sent_n_grams.append(n_gram)
         all_n_grams.extend(sent_n_grams)
-    if n == 2 and len(list(doc.sents)) > 1:
-        print(doc)
-        print(all_n_grams)
     return sent_n_grams
 
 

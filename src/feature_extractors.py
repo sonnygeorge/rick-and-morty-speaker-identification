@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Set, Optional
 from collections import Counter
 import re
 
@@ -18,7 +18,12 @@ from src.globals import (
     HAND_SELECTED_POS_TRIGRAMS,
     WORD_CLUSTERS,
     RANDOM_SEED,
+    TOKEN_BLACKLIST,
 )
+
+
+# TODO: Counts of entities (proxy for pop culture references)?
+# TODO: Counts of interjections?
 
 
 @feature_extractor
@@ -68,15 +73,29 @@ def dashes_per_sentence(doc: Doc) -> Dict[str, float]:
 
 @feature_extractor
 def all_n_gram_one_hots(
-    doc: Doc, n: int, lemmatize: bool = False, append_depedency_labels: bool = False
+    doc: Doc,
+    n: int,
+    lemmatize: bool = False,
+    append_depedency_labels: bool = False,
+    use_blacklist: bool = False,
+    whitelist: Optional[Set[str]] = None,
 ) -> Dict[str, float]:
     """Extracts one-hot features for all n-grams in the input text."""
     n_grams = convert_doc_to_n_grams(
         doc, n, lemmatize=lemmatize, append_depedency_labels=append_depedency_labels
     )
+    if whitelist is not None:  # Reduce to whitelist only
+        n_grams = [ng for ng in n_grams if ng.lower() in whitelist]
     suffix = "_lem" if lemmatize else ""
     suffix += "_dep" if append_depedency_labels else ""
-    return {f"has({ng}){suffix}": 1 for ng in n_grams}
+    if use_blacklist:
+        feats = {f"has({ng}){suffix}": 1 for ng in n_grams if ng not in TOKEN_BLACKLIST}
+        blacklisted = [f"has({ng})" for ng in n_grams if ng in TOKEN_BLACKLIST]
+        if len(blacklisted) > 0:
+            print(f"Blacklisted: {blacklisted}")
+    else:
+        feats = {f"has({ng}){suffix}": 1 for ng in n_grams}
+    return feats
 
 
 @feature_extractor
@@ -86,17 +105,28 @@ def all_n_gram_counts(
     lemmatize: bool = False,
     append_depedency_labels: bool = False,
     normalize: bool = False,
+    use_blacklist: bool = False,
+    whitelist: Optional[Set[str]] = None,
 ) -> Dict[str, float]:
     """Extracts one-hot features for all n-grams in the input text."""
     n_grams = convert_doc_to_n_grams(
         doc, n, lemmatize=lemmatize, append_depedency_labels=append_depedency_labels
     )
+    if whitelist is not None:  # Reduce to whitelist only
+        n_grams = [ng for ng in n_grams if ng.lower() in whitelist]
     counts = Counter(n_grams)
     if normalize:
         counts = {n_gram: count / len(n_grams) for n_gram, count in counts.items()}
     suffix = "_lem" if lemmatize else ""
     suffix += "_dep" if append_depedency_labels else ""
-    return {f"count({ng}){suffix}": count for ng, count in counts.items()}
+    if use_blacklist:
+        feats = {f"has({ng}){suffix}": 1 for ng in n_grams if ng not in TOKEN_BLACKLIST}
+        blacklisted = [f"count({ng})" for ng in n_grams if ng in TOKEN_BLACKLIST]
+        if len(blacklisted) > 0:
+            print(f"Blacklisted: {blacklisted}")
+    else:
+        feats = {f"count({ng}){suffix}": count for ng, count in counts.items()}
+    return feats
 
 
 @feature_extractor
@@ -228,6 +258,7 @@ def neighborhood_degrees_of_presence(
     normalize: bool = False,
     weight_decay_rate: Optional[float] = None,
     n_neighbors: int = 5,
+    use_blacklist: bool = False,
 ) -> Dict[str, float]:
     # TODO: Docstring
     suffix = "_norm" if lemmatize else ""
@@ -241,6 +272,8 @@ def neighborhood_degrees_of_presence(
     model = load_embedding_model(gensim_model_slug)
     degrees_of_presence_by_neighborhood = {}
     for word, neighborhood in neighborhoods.items():
+        if use_blacklist and word in TOKEN_BLACKLIST:
+            continue
         feature_key = f"deg_of_presence({word}){suffix}"
         cos_similarities = []
         for token in doc:

@@ -68,6 +68,75 @@ WORD_CLUSTERS = {
     "Food": FOOD_WORDS,
 }
 
+# Highly specific tokens that to my intuition/domain knowledge...
+# ...seem likely to cause overfitting to the training data
+TOKEN_BLACKLIST = {
+    "yyyyyyyyyyou",
+    "vindicator",
+    "vindicators",
+    "Vindicator",
+    "Vindicators",
+    "Paul",
+    "paul",
+    "Newman",
+    "newman",
+    "Goldenfold",
+    "goldenfold",
+    "Supernova",
+    "supernova",
+    "Gazorpazorp",
+    "gazorpazorp",
+    "Vagina",
+    "vagina",
+    "iii",
+    "5",
+    "squanch",
+    "Cervine",
+    "cervine",
+    "ya",
+    "yes",
+    "yeah",
+}  # AKA these are sus...
+
+# Unigrams that won't embed well, so neighborhood degree of presence will be less...
+# ...meaningful than unigram one-hots or counts
+FAMILIAL_WORDS_AND_COMMON_NAMES = {
+    "birdperson",
+    "tammy",
+    "gearhead",
+    "jessica",
+    "rick",
+    "morty",
+    "summer",
+    "beth",
+    "jerry",
+    "wong",
+    "smith",
+    "sanchez",
+    "sanchezes",
+    "smiths",
+    "father",
+    "mother",
+    "dad",
+    "mom",
+    "son",
+    "daughter",
+    "brother",
+    "sister",
+    "grandfather",
+    "grandpa",
+    "grandma",
+    "mom",
+    "dad",
+    "sis",
+    "bro",
+    "grandmother",
+    "grandson",
+    "granddaughter",
+    "jesus",
+    "christ",
+    "um",
+}
 
 HAND_SELECTED_POS_BIGRAMS = {
     "'AUX VERB'",
@@ -108,6 +177,7 @@ HAND_SELECTED_POS_BIGRAMS = {
     "'PRON PRON'",
     "'PRON AUX'",
 }
+
 HAND_SELECTED_POS_TRIGRAMS = {
     "'VERB PRON NOUN'",
     "'PRON ADP NOUN'",
