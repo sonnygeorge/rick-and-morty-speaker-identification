@@ -390,7 +390,15 @@ GENERATION_MODEL_PARAMS = [
             "max_depth": [(0.2, 3), (0.6, 4), (0.1, 5), (0.05, 6)],
             "objective": [(0.5, "multi:softmax"), (0.5, "multi:softprob")],
             "num_class": [(1, 5)],
-            "n_estimators": [(0.2, 45), (0.2, 60), (0.3, 80), (0.2, 100), (0.1, 137)],
+            "n_estimators": [
+                (0.2, 23),
+                (0.3, 35),
+                (0.2, 45),
+                (0.1, 60),
+                (0.1, 80),
+                (0.05, 100),
+                (0.05, 137),
+            ],
             # Minimum sum of instance weight needed in a child
             "min_child_weight": [(0.5, 1), (0.3, 2), (0.1, 3), (0.1, 4)],
             # Minimum loss reduction required to make a further partition on a leaf node
@@ -606,7 +614,7 @@ MANUALLY_CONFIGURED_EXPERIMENTS = [
         use_by_episode_splits=False,
         model_type=XGBClassifier,
         random_state=RANDOM_SEED,
-        n_estimators=45,
+        n_estimators=38,
         max_depth=4,  # Maximum tree depth for base learners
         min_child_weight=1,  # Minimum sum of instance weight (hessian) needed in a child
         gamma=0.1,  # Minimum loss reduction required to make a further partition on a leaf node
