@@ -256,12 +256,12 @@ class Experiment:
             importances = list(self.importances.items())
             for feature, importance in importances[:18]:
                 md += f"| {feature} | {importance} |\n"
-            if len(importances) > 36:
+            if len(importances) > 60:
                 md += "| ... | ... |\n"
-                for feature, importance in importances[-18:]:
+                for feature, importance in importances[-30:]:
                     md += f"| {feature} | {importance} |\n"
             else:
-                for feature, importance in importances[18:]:
+                for feature, importance in importances[30:]:
                     md += f"| {feature} | {importance} |\n"
         if self.coefs is not None:
             unused_coefs = self.coefs[self.coefs == 0]

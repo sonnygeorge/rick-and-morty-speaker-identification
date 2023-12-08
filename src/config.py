@@ -232,7 +232,7 @@ FEATURE_EXTRACTORS = {**OTHER_FEATURE_EXTRACTORS, **GENSIM_FEATURE_EXTRACTORS}
 print("Number of unique feature extractors:", len(FEATURE_EXTRACTORS))
 
 GENERATION_FEATURE_PARAMS = [
-    (0.95, [(1.0, "Total Sentence Count")]),
+    (0.6, [(1.0, "Total Sentence Count")]),
     (0.95, [(1.0, "Average Tokens Per Sentence")]),
     (0.95, [(1.0, "Average Word Length")]),
     (0.95, [(1.0, "Question Marks Per Sentence")]),
@@ -623,7 +623,6 @@ MANUALLY_CONFIGURED_EXPERIMENTS = [
         reg_lambda=1,  # L2 regularization term on weights
         reg_alpha=0.1,  # L1 regularization term on weights
         learning_rate=0.01,  # Learning rate
-        n_estimators=100,  # Number of gradient boosted trees
         objective="multi:softprob",  # Multiclass classification
         num_class=5,  # Number of classes
     ),
