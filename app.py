@@ -222,6 +222,9 @@ def handle_experiment_selection(selection):
 # Declare Streamlit app
 st.title("Rick & Morty Speaker Identification")
 st.image(IMG_URL)
+st.markdown(
+    "An interactive applet for exploring the results of [this](https://github.com/sonnygeorge/rick-and-morty-speaker-identification) project."
+)
 st.divider()
 st.header("Comparison of Top Experiment Results")
 st.text(f"Number of experiments run: {N_EXPERIMENTS}")
