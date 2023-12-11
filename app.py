@@ -8,14 +8,13 @@ import streamlit as st
 from matplotlib import transforms
 from matplotlib.patheffects import withStroke
 
-from src.globals import DATA_DIR_PATH, RESULTS_CSV_FPATH
-
+DATA_DIR_PATH = "data"
+RESULTS_CSV_FNAME = "results.csv"
+RESULTS_CSV_FPATH = os.path.join(DATA_DIR_PATH, RESULTS_CSV_FNAME)
 IMG_URL = "https://variety.com/wp-content/uploads/2022/08/Rick-and-Morty-Season-6.png?"
-
 RICK_ONLY_NAME = "Rick-Only"
 UNIGRAM_ONE_HOT_NAME = "Unigram One-Hot"
 MAX_TOP_N = 5
-
 
 _READABLE_NAME_MAP = {
     "LgstcRgrssn": "Logistic Regression",
@@ -38,6 +37,15 @@ _model_counts = {
 NAMES_TO_HIGHLIGHT = [
     # "Logistic Regression 441",  # THE BEST
 ]
+
+COLORS = {
+    "Decision Tree": "dimgray",
+    "Gradient Boosting": "dimgray",
+    "Logistic Regression": "dimgray",
+    "Naive Bayes": "dimgray",
+    "Random Forest": "dimgray",
+    "XGBoost": "dimgray",
+}
 
 
 def get_readable_name(name: str) -> str:
@@ -79,28 +87,18 @@ SCORES_DF = SCORES_DF.drop(
 SCORES_DF = SCORES_DF[~SCORES_DF.index.str.contains("Decision Tree")]
 SCORES_DF = SCORES_DF[~SCORES_DF.index.str.contains("Random Forest")]
 
-print(SCORES_DF)
-for readable, slug in NAME_MAP.items():
-    if "Rick-Only" in readable or "Unigram One-Hot" in readable:
-        print(f"Skipping {readable}")
-        continue
-    if readable in SCORES_DF.index:
-        print(f"Skipping {readable}")
-        continue
-    fpath_to_delete = os.path.join(DATA_DIR_PATH, f"{slug}.md")
-    if os.path.exists(fpath_to_delete):
-        os.remove(fpath_to_delete)
-    print(f"Deleted {fpath_to_delete}")
-
-
-COLORS = {
-    "Decision Tree": "dimgray",
-    "Gradient Boosting": "dimgray",
-    "Logistic Regression": "dimgray",
-    "Naive Bayes": "dimgray",
-    "Random Forest": "dimgray",
-    "XGBoost": "dimgray",
-}
+## Uncomment if yoou want to delete excess .md from data folder
+# for readable, slug in NAME_MAP.items():
+#     if "Rick-Only" in readable or "Unigram One-Hot" in readable:
+#         print(f"Skipping {readable}")
+#         continue
+#     if readable in SCORES_DF.index:
+#         print(f"Skipping {readable}")
+#         continue
+#     fpath_to_delete = os.path.join(DATA_DIR_PATH, f"{slug}.md")
+#     if os.path.exists(fpath_to_delete):
+#         os.remove(fpath_to_delete)
+#     print(f"Deleted {fpath_to_delete}")
 
 
 def plot_scores():
@@ -203,7 +201,6 @@ def plot_scores():
         )
         text.set_path_effects([withStroke(linewidth=3, foreground="white")])
     plt.tight_layout()
-    # # Save plot
     # plt.savefig(
     #     os.path.join("results_plot.png"),
     #     dpi=300,
