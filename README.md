@@ -1,4 +1,4 @@
-# Author Attribution in Rick & Morty
+# Rick & Morty Speaker Identification
 
 A journey in text classification.
 
