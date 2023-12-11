@@ -1,19 +1,19 @@
-from typing import Type, Literal, Dict, Optional, Set
-from time import perf_counter
-from collections import defaultdict
 import os
 import re
+from collections import defaultdict
+from time import perf_counter
+from typing import Dict, Literal, Optional, Set, Type
 
 import numpy as np
 import pandas as pd
-from spacy.tokens import Doc
 from sklearn.base import BaseEstimator
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.metrics import classification_report
 from sklearn.preprocessing import LabelEncoder
+from spacy.tokens import Doc
 
+from src.globals import DATA_DIR_PATH, RESULTS_CSV_FPATH, SCORERS
 from src.schema.feature_extractor import FeatureExtractor
-from src.globals import SCORERS, RESULTS_CSV_FPATH, DATA_DIR_PATH
 
 
 class Experiment:
@@ -195,13 +195,13 @@ class Experiment:
         md += f"- ⌛ **Model Train Time**: \n\t{self.model_train_time:.3f}\n"
         md += f"- 💬 **SpaCy Preprocessing Model**: \n\t`{self.spacy_model_name}`\n\n"
         if self.model_params:
-            md += f"- 🧬 **Model Hyperparameters**:\n\n"
+            md += "- 🧬 **Model Hyperparameters**:\n\n"
             for param, value in self.model_params.items():
                 md += f"\t- `{param}`: {value}\n"
         md += "\n"
         md += "### 📊 Scores\n\n"
-        md += f"| Metric | Train | Dev | Test |\n"
-        md += f"| ------ | ----- | --- | ---- |\n"
+        md += "| Metric | Train | Dev | Test |\n"
+        md += "| ------ | ----- | --- | ---- |\n"
         for metric, train_score in self.train_scores.items():
             md += f"| {metric} | {train_score} | {self.dev_scores[metric]} | "
             md += f"{self.test_scores[metric]} |\n"

@@ -1,5 +1,5 @@
-from typing import Protocol, Any, Dict, Optional
 from functools import wraps
+from typing import Any, Dict, Optional, Protocol
 
 import pandas as pd
 from spacy.tokens import Doc

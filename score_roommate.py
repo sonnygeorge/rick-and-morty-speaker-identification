@@ -2,8 +2,7 @@ import os
 
 import pandas as pd
 
-from src.globals import SCORERS, DATA_DIR_PATH
-
+from src.globals import DATA_DIR_PATH, SCORERS
 
 df = pd.read_csv(os.path.join(DATA_DIR_PATH, "roommate_benchmark.csv"))
 

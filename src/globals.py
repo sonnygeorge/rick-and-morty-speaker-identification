@@ -1,22 +1,15 @@
 import os
 from functools import partial
-from typing import Dict, Callable
+from typing import Callable, Dict
 
-from sklearn.metrics import accuracy_score, f1_score
 import numpy as np
+from sklearn.metrics import accuracy_score, f1_score
 
-from src.word_clusters import (
-    DEATH_WORDS,
-    DUBIETY_WORDS,
-    CONDESCENSION_WORDS,
-    INTOXICATION_WORDS,
-    GRATITUDE_WORDS,
-    SCIFI_CREATURE_WORDS,
-    GENERIC_EMOTIION_WORDS,
-    FANCY_SCIENCE_WORDS,
-    SEXUAL_WORDS,
-    FOOD_WORDS,
-)
+from src.word_clusters import (CONDESCENSION_WORDS, DEATH_WORDS, DUBIETY_WORDS,
+                               FANCY_SCIENCE_WORDS, FOOD_WORDS,
+                               GENERIC_EMOTIION_WORDS, GRATITUDE_WORDS,
+                               INTOXICATION_WORDS, SCIFI_CREATURE_WORDS,
+                               SEXUAL_WORDS)
 
 DATA_DIR_PATH = "data"
 RAW_SCRIPT_DATA_FNAME = "RickAndMortyScripts.csv"

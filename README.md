@@ -8,6 +8,18 @@ A text classification story.
 
 Classifying the speaker of an isolated Rick & Morty utterance is a difficult task. For example, my roommate, a die-hard Rick & Morty fan, was only 60% accurate when presented with a shuffled random sample of 80 instances. Furthermore, with only 11 episodes-worth of data, it was very hard not to overfit to the specific quirks of the episodes (E.g. tokens associated with one-off, character-specific side quests). Nevertheless, introducing the custom, word-embedding-based feature _"Neighborhood Degrees of Presence"_, as well as restricting unigram-based features to only familial words and common names proved to be the crucial moments that pushed performance to near-human level.
 
+**Key Files**:
+
+```python
+📁
+├─ 📁 src/
+│  ├─ 📄 config.py  # Experimentation configurations
+│  ├─ 📄 feature_extractors.py  # Feature extraction functions
+│  ...
+├─ 📄 run_experiments.py  # Script to run experimentation
+...
+```
+
 ## The Task at Hand
 
 With nothing but an _isolated_ utterance from the TV show Rick and Morty, can we detect who the speaker was? Take the following utterance for example:
@@ -145,19 +157,19 @@ I didn't beat my roommate... 💔
 
 However, we did get pretty close. Here are the dev set results stacked up for the top experiments from select model types:
 
-![]()
+![Results Plot](results_plot.png)
 
-Where the horizontal lines correspond to the following points of reference:
+...where the horizontal lines correspond to the following points of reference:
 
 - **Roommate** - Human-expert (my roommate's) scores
-- **Unigram One-Hot** - Scores from an sklearn logistic regression model (default hyperparameters) that only used a one-hot encoding of unigrams as features
+- **Unigram One-Hot** - Scores from an sklearn logistic regression model that only used a one-hot encoding of unigrams as features
 - **Rick-Only** - Scores when "Rick" (the most common speaker) is predicted every time
 
 **Analysis:**
 
-Given the number of experiments with similarly high scores, it definitely seems that we have converged around a maximum performance given the setup.
+Given the number of experiments with similarly high scores, we have likely converged around a maximum performance given the setup.
 
-In order to pick a best model, we need to consider the scores on the train & test sets as well as our intuition about each configuration's potential to generalize further. Also, with all else being equal, we should prefer simpler models.
+In order to pick a best model, we need to consider the scores on the train and test sets as well as our intuition about each configuration's potential to generalize further. Also, with all else being equal, we should prefer simpler models.
 
 After considering the above for our top models, I believe that the best choice would be the following...
 
@@ -220,16 +232,3 @@ After considering the above for our top models, I believe that the best choice w
 - `"Proportion Of Tokens That Are Stop Words"`
 - `"Proportion Of Chars That Are Capitalized"`
 - `"Nghbhood Degrees - Lemmas (.5decay,4topn,5nghbrs)(glove-wiki-gigaword-50)(Rndm)(-blacklist)"`
-
-## TODO
-
-README:
-
-- [ ] Link to hosted streamlit app
-- [ ] Add graph
-- [ ] Add file structure
-
-Other:
-
-- [ ] Lint
-- [ ] Delete excess .md files

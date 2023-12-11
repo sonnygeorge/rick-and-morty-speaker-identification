@@ -3,18 +3,9 @@ import os
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-from src.globals import (
-    RAW_SCRIPT_DATA_FPATH,
-    SANCHEZ_FAMILY_LABELS,
-    RANDOM_SEED,
-    TRAIN_STR,
-    DEV_STR,
-    TEST_STR,
-    RANDOM_STR,
-    BY_EPISODE_STR,
-    DATA_DIR_PATH,
-)
-
+from src.globals import (BY_EPISODE_STR, DATA_DIR_PATH, DEV_STR, RANDOM_SEED,
+                         RANDOM_STR, RAW_SCRIPT_DATA_FPATH,
+                         SANCHEZ_FAMILY_LABELS, TEST_STR, TRAIN_STR)
 
 MIN_WORDS_IN_UTTERANCE = 6
 TEST_EPISODE_NOS = [3, 6, 8]

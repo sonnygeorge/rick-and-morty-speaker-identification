@@ -2,15 +2,13 @@
 
 import os
 
-import pandas as pd
 import matplotlib.pyplot as plt
-from matplotlib import transforms
+import pandas as pd
 import streamlit as st
+from matplotlib import transforms
 from matplotlib.patheffects import withStroke
 
-
-from src.globals import RESULTS_CSV_FPATH, DATA_DIR_PATH
-
+from src.globals import DATA_DIR_PATH, RESULTS_CSV_FPATH
 
 IMG_URL = "https://variety.com/wp-content/uploads/2022/08/Rick-and-Morty-Season-6.png?"
 
@@ -38,13 +36,7 @@ _model_counts = {
 }
 
 NAMES_TO_HIGHLIGHT = [
-    "Gradient Boosting 3",
-    "Logistic Regression 78",
-    "Logistic Regression 441",  # THE BEST
-    "Logistic Regression 184",
-    "Logistic Regression 243",
-    "Logistic Regression 286",
-    "XGBoost 314",
+    # "Logistic Regression 441",  # THE BEST
 ]
 
 
@@ -85,6 +77,20 @@ SCORES_DF = SCORES_DF.drop(
     columns=["number agnostic sortable index", "Accuracy + Macro F1"]
 )
 SCORES_DF = SCORES_DF[~SCORES_DF.index.str.contains("Decision Tree")]
+SCORES_DF = SCORES_DF[~SCORES_DF.index.str.contains("Random Forest")]
+
+print(SCORES_DF)
+for readable, slug in NAME_MAP.items():
+    if "Rick-Only" in readable or "Unigram One-Hot" in readable:
+        print(f"Skipping {readable}")
+        continue
+    if readable in SCORES_DF.index:
+        print(f"Skipping {readable}")
+        continue
+    fpath_to_delete = os.path.join(DATA_DIR_PATH, f"{slug}.md")
+    if os.path.exists(fpath_to_delete):
+        os.remove(fpath_to_delete)
+    print(f"Deleted {fpath_to_delete}")
 
 
 COLORS = {
@@ -108,8 +114,8 @@ def plot_scores():
     ax.set_yticks([0.1, 0.2, 0.3, 0.4, 0.5, 0.6])
     ax.tick_params(axis="y", labelsize=7)
     ax.legend(loc="upper center", bbox_to_anchor=(0.5, 1), ncol=len(df.columns))
-    # Find max values for each category
-    max_values = df.max()
+    # # Find max values for each category
+    # max_values = df.max()
     # Prepare colors for x labels
     x_label_colors = []
     for model_name in df.index:
@@ -117,13 +123,11 @@ def plot_scores():
         color = COLORS[model_name_readable]
         x_label_colors.append(color)
     # Iterate over the bars
-    n_rows = len(df)
+    # n_rows = len(df)
     # font_size = 4.5 if n_rows > 15 else 5.6
     # font_size = font_size if n_rows > 10 else 7
     font_size = 6.5
     for i, bar in enumerate(ax.patches):
-        # Infer the column from the index
-        column = int(i / n_rows)
         # Annotate the bars with their values
         value = bar.get_height()
         shadow_color = "white"
@@ -158,7 +162,6 @@ def plot_scores():
                 withStroke(linewidth=shadow_width, foreground="white", alpha=1)
             ],
         )
-
     # Add benchmark lines
     for y, color, linestyle, alpha in [
         (0.6, "steelblue", "dashed", 1),
@@ -200,6 +203,12 @@ def plot_scores():
         )
         text.set_path_effects([withStroke(linewidth=3, foreground="white")])
     plt.tight_layout()
+    # # Save plot
+    # plt.savefig(
+    #     os.path.join("results_plot.png"),
+    #     dpi=300,
+    #     bbox_inches="tight",
+    # )
     return plt
 
 

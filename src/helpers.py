@@ -1,26 +1,17 @@
-from time import perf_counter
 import os
-
-from typing import List, Tuple, Literal, Dict, Union
 from functools import cache
+from time import perf_counter
+from typing import Dict, List, Literal, Tuple, Union
 
-from gensim.models import KeyedVectors
 import gensim.downloader
-import pandas as pd
 import numpy as np
-from spacy.tokens import Doc
+import pandas as pd
 import spacy
+from gensim.models import KeyedVectors
+from spacy.tokens import Doc
 
-from src.globals import (
-    TEST_STR,
-    DEV_STR,
-    TRAIN_STR,
-    START_TOKEN,
-    END_TOKEN,
-    RANDOM_STR,
-    BY_EPISODE_STR,
-    DATA_DIR_PATH,
-)
+from src.globals import (BY_EPISODE_STR, DATA_DIR_PATH, DEV_STR, END_TOKEN,
+                         RANDOM_STR, START_TOKEN, TEST_STR, TRAIN_STR)
 
 
 class RickPredictor:

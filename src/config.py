@@ -1,41 +1,32 @@
-from typing import Dict, List, Union
-from functools import partial
 import random
+from functools import partial
+from typing import Dict, List, Union
 
 import numpy as np
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import (
-    RandomForestClassifier,
-    GradientBoostingClassifier,
-)
+from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.naive_bayes import GaussianNB
 from sklearn.metrics import f1_score
+from sklearn.naive_bayes import GaussianNB
+from sklearn.tree import DecisionTreeClassifier
 from xgboost import XGBClassifier
 
-import rich
-
-from src.feature_extractors import (
-    total_sentence_count,
-    avg_tokens_per_sentence,
-    avg_token_length,
-    proportion_stop_words,
-    proportion_alpha_chars_capitalized,
-    question_marks_per_sentence,
-    exclamation_marks_per_sentence,
-    dashes_per_sentence,
-    all_n_gram_counts,
-    avg_root_verb_embedding,
-    neighborhood_degrees_of_presence,
-    all_n_gram_one_hots,
-    pos_tag_n_gram_counts,
-    get_counts_of_hand_selected_pos_n_grams,
-    topical_proximity_score,
-)
-from src.schema.feature_extractor import FeatureExtractor
-from src.schema.configured_experiment import ConfiguredExperiment
+from src.feature_extractors import (all_n_gram_counts, all_n_gram_one_hots,
+                                    avg_root_verb_embedding, avg_token_length,
+                                    avg_tokens_per_sentence,
+                                    dashes_per_sentence,
+                                    exclamation_marks_per_sentence,
+                                    get_counts_of_hand_selected_pos_n_grams,
+                                    neighborhood_degrees_of_presence,
+                                    pos_tag_n_gram_counts,
+                                    proportion_alpha_chars_capitalized,
+                                    proportion_stop_words,
+                                    question_marks_per_sentence,
+                                    topical_proximity_score,
+                                    total_sentence_count)
+from src.globals import FAMILIAL_WORDS_AND_COMMON_NAMES, RANDOM_SEED
 from src.helpers import RickPredictor
-from src.globals import RANDOM_SEED, FAMILIAL_WORDS_AND_COMMON_NAMES
+from src.schema.configured_experiment import ConfiguredExperiment
+from src.schema.feature_extractor import FeatureExtractor
 
 random.seed(RANDOM_SEED)
 
@@ -654,9 +645,11 @@ def generate_experiments(n: int) -> List[ConfiguredExperiment]:
             model_kwargs["max_iter"] = 1400
             if model_kwargs["solver"] == "lbfgs":
                 model_kwargs["penalty"] = "l2"
-            if (
-                model_kwargs["solver"] == "liblinear"
-                and model_kwargs["penalty"] == "elasticnet"
+            if all(
+                [
+                    model_kwargs["solver"] == "liblinear",
+                    model_kwargs["penalty"] == "elasticnet",
+                ]
             ):
                 model_kwargs["penalty"] = "l2"
             if model_kwargs["penalty"] == "elasticnet":
@@ -715,16 +708,16 @@ MANUALLY_CONFIGURED_EXPERIMENTS = [
         model_type=XGBClassifier,
         random_state=RANDOM_SEED,
         n_estimators=38,
-        max_depth=4,  # Maximum tree depth for base learners
-        min_child_weight=1,  # Minimum sum of instance weight (hessian) needed in a child
-        gamma=0.1,  # Minimum loss reduction required to make a further partition on a leaf node
-        subsample=0.8,  # Subsample ratio of the training instances
-        colsample_bytree=0.8,  # Subsample ratio of columns when constructing each tree
-        reg_lambda=1,  # L2 regularization term on weights
-        reg_alpha=0.1,  # L1 regularization term on weights
-        learning_rate=0.01,  # Learning rate
-        objective="multi:softprob",  # Multiclass classification
-        num_class=5,  # Number of classes
+        max_depth=4,
+        min_child_weight=1,
+        gamma=0.1,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        reg_lambda=1,
+        reg_alpha=0.1,
+        learning_rate=0.01,
+        objective="multi:softprob",
+        num_class=5,
     ),
     ConfiguredExperiment(
         feature_extractor_names=[
@@ -788,6 +781,3 @@ GENERATED_EXPERIMENTS = generate_experiments(0)  # 1200
 EXPERIMENTS = []  # (
 #     BASELINE_EXPERIMENTS + MANUALLY_CONFIGURED_EXPERIMENTS + GENERATED_EXPERIMENTS
 # )
-
-for experiment in EXPERIMENTS:
-    rich.inspect(experiment)

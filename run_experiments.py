@@ -1,8 +1,8 @@
 import os
 
-from src.initialize_experiments import initialize_experiments
 from src.config import EXPERIMENTS
 from src.globals import DATA_DIR_PATH, RESULTS_CSV_FNAME
+from src.initialize_experiments import initialize_experiments
 
 
 def clean_dirs():

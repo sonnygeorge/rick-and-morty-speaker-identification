@@ -1,29 +1,17 @@
-from typing import Dict, List, Set, Optional
-from collections import Counter
 import re
+from collections import Counter
+from typing import Dict, List, Optional, Set
 
-from spacy.tokens import Doc
 import numpy as np
+from spacy.tokens import Doc
 
+from src.globals import (HAND_SELECTED_POS_BIGRAMS, HAND_SELECTED_POS_TRIGRAMS,
+                         RANDOM_SEED, TOKEN_BLACKLIST, WORD_CLUSTERS)
+from src.helpers import (convert_doc_to_n_grams, cosine_similarity,
+                         get_exponentially_decaying_weights,
+                         get_neighborhoods_from_training_data,
+                         load_embedding_model)
 from src.schema.feature_extractor import feature_extractor
-from src.helpers import (
-    load_embedding_model,
-    convert_doc_to_n_grams,
-    get_neighborhoods_from_training_data,
-    cosine_similarity,
-    get_exponentially_decaying_weights,
-)
-from src.globals import (
-    HAND_SELECTED_POS_BIGRAMS,
-    HAND_SELECTED_POS_TRIGRAMS,
-    WORD_CLUSTERS,
-    RANDOM_SEED,
-    TOKEN_BLACKLIST,
-)
-
-# TODO: Whithold family words/names from degrees of presence (pass as blacklist)?
-# TODO: Counts of entities (proxy for pop culture references)?
-# TODO: Counts of interjections?
 
 
 @feature_extractor
@@ -260,7 +248,7 @@ def neighborhood_degrees_of_presence(
     n_neighbors: int = 5,
     use_blacklist: bool = False,
 ) -> Dict[str, float]:
-    # TODO: Docstring
+    """See README.md for more info.""" ""
     suffix = "_norm" if lemmatize else ""
     suffix += "_lem" if normalize else ""
     neighborhoods = get_neighborhoods_from_training_data(

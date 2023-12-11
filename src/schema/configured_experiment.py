@@ -1,5 +1,5 @@
 from functools import partial
-from typing import Dict, List, Type
+from typing import List, Type
 
 from sklearn.base import BaseEstimator
 

@@ -1,14 +1,14 @@
 ### 🚀 **RckPrdctr_1fs_1**
 
-- 🤖 **Model Type**: 
+- 🤖 **Model Type**:
 	<class 'src.helpers.RickPredictor'>
-- 📊 **Dataset Used**: 
+- 📊 **Dataset Used**:
 	_Random_
-- 🧠 **Number of Features**: 
+- 🧠 **Number of Features**:
 	1
-- ⌛ **Model Train Time**: 
+- ⌛ **Model Train Time**:
 	0.000
-- 💬 **SpaCy Preprocessing Model**: 
+- 💬 **SpaCy Preprocessing Model**:
 	`en_core_web_sm`
 
 

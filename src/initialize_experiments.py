@@ -1,15 +1,14 @@
-from typing import List
-from functools import cache, partial
 from collections import defaultdict
-from time import perf_counter
+from functools import cache, partial
+from typing import List
 
 import spacy
 
+from src.config import FEATURE_EXTRACTORS
+from src.globals import BY_EPISODE_STR, RANDOM_STR
 from src.helpers import load_data
 from src.schema.configured_experiment import ConfiguredExperiment
 from src.schema.experiment import Experiment
-from src.config import FEATURE_EXTRACTORS
-from src.globals import RANDOM_STR, BY_EPISODE_STR
 
 
 def initialize_experiments(
