@@ -1,6 +1,6 @@
 # Author Attribution in Rick & Morty
 
-A text classification story.
+A journey in text classification.
 
 (Fulfilling project requirements for COSI114a at Brandeis University, which prohibits using contextual embeddings and neural classifiers)
 

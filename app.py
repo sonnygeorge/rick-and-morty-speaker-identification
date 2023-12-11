@@ -223,7 +223,7 @@ def handle_experiment_selection(selection):
 
 
 # Declare Streamlit app
-st.title("Sanchez Family Classifier")
+st.title("Author Attribution in Rick & Morty")
 st.image(IMG_URL)
 st.divider()
 st.header("Comparison of Top Experiment Results")
