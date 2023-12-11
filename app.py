@@ -1,3 +1,5 @@
+"""Streamlit app for exploring the experiment results."""
+
 import os
 
 import pandas as pd
@@ -14,7 +16,7 @@ IMG_URL = "https://variety.com/wp-content/uploads/2022/08/Rick-and-Morty-Season-
 
 RICK_ONLY_NAME = "Rick-Only"
 UNIGRAM_ONE_HOT_NAME = "Unigram One-Hot"
-MAX_TOP_N = 9
+MAX_TOP_N = 5
 
 
 _READABLE_NAME_MAP = {
@@ -35,10 +37,19 @@ _model_counts = {
     "XGBClssfr": 0,
 }
 
+NAMES_TO_HIGHLIGHT = [
+    "Gradient Boosting 3",
+    "Logistic Regression 78",
+    "Logistic Regression 441",  # THE BEST
+    "Logistic Regression 184",
+    "Logistic Regression 243",
+    "Logistic Regression 286",
+    "XGBoost 314",
+]
+
 
 def get_readable_name(name: str) -> str:
     """Converts unreadable experiment names to human-readable names."""
-    print(name)
     if "RckPrdctr" in name:
         return RICK_ONLY_NAME
     if "LgstcRgrssn" in name and "_1fs" in name:
@@ -56,26 +67,32 @@ N_EXPERIMENTS = len(SCORES_DF)
 _readable_names = SCORES_DF.index.map(get_readable_name)
 NAME_MAP = {new: old for new, old in zip(_readable_names, SCORES_DF.index)}
 SCORES_DF.index = _readable_names
+SCORES_DF["Accuracy + Macro F1"] = SCORES_DF["Accuracy"] + SCORES_DF["Macro F1"]
 NEW_SCORES_DF = pd.DataFrame()
 for substring in list(_READABLE_NAME_MAP.values()) + [
     RICK_ONLY_NAME,
     UNIGRAM_ONE_HOT_NAME,
 ]:
     subgroup = SCORES_DF[SCORES_DF.index.str.contains(substring)]
-    top_rows = subgroup.sort_values(by="Accuracy", ascending=False).head(MAX_TOP_N)
+    top_rows = subgroup.sort_values(by="Accuracy + Macro F1", ascending=False).head(
+        MAX_TOP_N
+    )
     NEW_SCORES_DF = pd.concat([NEW_SCORES_DF, top_rows])
 SCORES_DF = NEW_SCORES_DF
 SCORES_DF["number agnostic sortable index"] = SCORES_DF.index.str[:5]
-SCORES_DF = SCORES_DF.sort_values(by=["number agnostic sortable index", "Accuracy"])
-SCORES_DF = SCORES_DF.drop(columns=["number agnostic sortable index"])
+SCORES_DF = SCORES_DF.sort_values(by=["Accuracy + Macro F1"])
+SCORES_DF = SCORES_DF.drop(
+    columns=["number agnostic sortable index", "Accuracy + Macro F1"]
+)
+SCORES_DF = SCORES_DF[~SCORES_DF.index.str.contains("Decision Tree")]
 
 
 COLORS = {
-    "Decision Tree": "indigo",
-    "Gradient Boosting": "darkslategray",
+    "Decision Tree": "dimgray",
+    "Gradient Boosting": "dimgray",
     "Logistic Regression": "dimgray",
-    "Naive Bayes": "darkolivegreen",
-    "Random Forest": "darkslategray",
+    "Naive Bayes": "dimgray",
+    "Random Forest": "dimgray",
     "XGBoost": "dimgray",
 }
 
@@ -84,8 +101,9 @@ def plot_scores():
     # Remove Rick-Only and Unigram One-Hot baselines from df
     df = SCORES_DF.drop([RICK_ONLY_NAME, UNIGRAM_ONE_HOT_NAME])
     # Create basic plot
-    ax = df.plot(kind="bar", legend=True, figsize=(9, 6))
+    ax = df.plot(kind="bar", legend=True, figsize=(8, 7))
     plt.xticks(rotation=90, fontsize=9)
+    plt.title("Best Experiments From Best Model Varieties", fontsize=10)
     ax.set_ylim([0.1, 0.66])
     ax.set_yticks([0.1, 0.2, 0.3, 0.4, 0.5, 0.6])
     ax.tick_params(axis="y", labelsize=7)
@@ -93,21 +111,38 @@ def plot_scores():
     # Find max values for each category
     max_values = df.max()
     # Prepare colors for x labels
-    x_label_colors = ["dimgray"] * len(df)
+    x_label_colors = []
+    for model_name in df.index:
+        model_name_readable = " ".join(model_name.split(" ")[:-1])
+        color = COLORS[model_name_readable]
+        x_label_colors.append(color)
     # Iterate over the bars
     n_rows = len(df)
-    font_size = 4.5 if n_rows > 15 else 5.6
-    font_size = font_size if n_rows > 10 else 7
-    font_size = 8 if n_rows < 5 else font_size
+    # font_size = 4.5 if n_rows > 15 else 5.6
+    # font_size = font_size if n_rows > 10 else 7
+    font_size = 6.5
     for i, bar in enumerate(ax.patches):
         # Infer the column from the index
         column = int(i / n_rows)
         # Annotate the bars with their values
         value = bar.get_height()
-        is_max = value == max_values[df.columns[column]]
-        shadow_color = "yellow" if is_max else "white"
-        shadow_width = 3 if is_max else 5
-        alpha = 0.3 if is_max else 1
+        shadow_color = "white"
+        shadow_width = 5
+        alpha = 1
+        # Set the x label and shadow for this group of bars
+        if i < len(x_label_colors):
+            if any(name in str(ax.get_xticklabels()[i]) for name in NAMES_TO_HIGHLIGHT):
+                color = "black"
+                shadow_color = "yellow"
+                alpha = 0.6
+            else:
+                color = x_label_colors[i]
+                shadow_color = "white"
+            ax.get_xticklabels()[i].set_color(color)
+            with_stroke = withStroke(
+                linewidth=shadow_width, foreground=shadow_color, alpha=alpha
+            )
+            ax.get_xticklabels()[i].set_path_effects([with_stroke])
         # Add annotation
         ax.annotate(
             f"{value:.2f}",
@@ -120,26 +155,18 @@ def plot_scores():
             rotation=90,
             color="black",
             path_effects=[
-                withStroke(linewidth=shadow_width, foreground=shadow_color, alpha=alpha)
+                withStroke(linewidth=shadow_width, foreground="white", alpha=1)
             ],
         )
-        # Set the x label and shadow for this group of bars
-        if i < len(x_label_colors):
-            color = "black" if is_max else x_label_colors[i]
-            ax.get_xticklabels()[i].set_color(color)
-            with_stroke = withStroke(
-                linewidth=shadow_width, foreground=shadow_color, alpha=alpha
-            )
-            ax.get_xticklabels()[i].set_path_effects([with_stroke])
 
     # Add benchmark lines
     for y, color, linestyle, alpha in [
-        (0.6, "steelblue", "dashed", 0.7),
-        (0.5, "darkorange", "dashed", 0.7),
-        (0.476, "steelblue", "dashdot", 0.7),
-        (0.128, "darkorange", "dashdot", 0.7),
-        (0.487, "steelblue", "dotted", 0.8),
-        (0.275, "darkorange", "dotted", 0.8),
+        (0.6, "steelblue", "dashed", 1),
+        (0.5, "darkorange", "dashed", 1),
+        (0.476, "steelblue", "dashdot", 0.6),
+        (0.128, "darkorange", "dashdot", 0.6),
+        (0.487, "steelblue", "dotted", 0.7),
+        (0.275, "darkorange", "dotted", 0.7),
     ]:
         ax.axhline(
             y=y,

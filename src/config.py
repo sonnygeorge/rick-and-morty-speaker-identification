@@ -2,6 +2,7 @@ from typing import Dict, List, Union
 from functools import partial
 import random
 
+import numpy as np
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import (
     RandomForestClassifier,
@@ -128,6 +129,41 @@ _GENSIM_FEATURE_EXTRACTORS = {
         n_neighbors=5,
         lemmatize=True,
     ),
+    "Nghbhood Degrees - Lemmas (no-decay,no-topn,8nghbrs)({gensim_model})(Rndm){blacklist}": partial(
+        neighborhood_degrees_of_presence,
+        use_by_episode_split=False,
+        n_neighbors=8,
+        lemmatize=True,
+    ),
+    "Nghbhood Degrees - Lemmas (no-decay,4topn,8nghbrs)({gensim_model})(Rndm){blacklist}": partial(
+        neighborhood_degrees_of_presence,
+        use_by_episode_split=False,
+        n_neighbors=8,
+        max_top_n=4,
+        lemmatize=True,
+    ),
+    "Nghbhood Degrees - Lemmas (no-decay,1topn,8nghbrs)({gensim_model})(Rndm){blacklist}": partial(
+        neighborhood_degrees_of_presence,
+        use_by_episode_split=False,
+        n_neighbors=8,
+        max_top_n=1,
+        lemmatize=True,
+    ),
+    "Nghbhood Degrees - Lemmas (.5decay,no-topn,8nghbrs)({gensim_model})(Rndm){blacklist}": partial(
+        neighborhood_degrees_of_presence,
+        use_by_episode_split=False,
+        weight_decay_rate=0.5,
+        n_neighbors=8,
+        lemmatize=True,
+    ),
+    "Nghbhood Degrees - Lemmas (.5decay,4topn,8nghbrs)({gensim_model})(Rndm){blacklist}": partial(
+        neighborhood_degrees_of_presence,
+        use_by_episode_split=False,
+        weight_decay_rate=0.5,
+        max_top_n=4,
+        n_neighbors=8,
+        lemmatize=True,
+    ),
     "Average Root Verb Embedding ({gensim_model})": partial(avg_root_verb_embedding),
 }
 
@@ -232,7 +268,7 @@ FEATURE_EXTRACTORS = {**OTHER_FEATURE_EXTRACTORS, **GENSIM_FEATURE_EXTRACTORS}
 print("Number of unique feature extractors:", len(FEATURE_EXTRACTORS))
 
 GENERATION_FEATURE_PARAMS = [
-    (0.6, [(1.0, "Total Sentence Count")]),
+    (0.35, [(1.0, "Total Sentence Count")]),
     (0.95, [(1.0, "Average Tokens Per Sentence")]),
     (0.95, [(1.0, "Average Word Length")]),
     (0.95, [(1.0, "Question Marks Per Sentence")]),
@@ -289,6 +325,26 @@ GENERATION_FEATURE_PARAMS = [
                         0.25,
                         "Nghbhood Degrees - Lemmas (.5decay,1topn,5nghbrs)({gensim_model})(Rndm)",
                     ),
+                    (
+                        0.05,
+                        "Nghbhood Degrees - Lemmas (no-decay,no-topn,8nghbrs)({gensim_model})(Rndm)",
+                    ),
+                    (
+                        0.02,
+                        "Nghbhood Degrees - Lemmas (no-decay,4topn,8nghbrs)({gensim_model})(Rndm)",
+                    ),
+                    (
+                        0.13,
+                        "Nghbhood Degrees - Lemmas (no-decay,1topn,8nghbrs)({gensim_model})(Rndm)",
+                    ),
+                    (
+                        0.18,
+                        "Nghbhood Degrees - Lemmas (.5decay,no-topn,8nghbrs)({gensim_model})(Rndm)",
+                    ),
+                    (
+                        0.7,
+                        "Nghbhood Degrees - Lemmas (.5decay,4topn,8nghbrs)({gensim_model})(Rndm)",
+                    ),
                 ],
             ),
             (
@@ -319,8 +375,28 @@ GENERATION_FEATURE_PARAMS = [
                         "Nghbhood Degrees - Lemmas (.5decay,4topn,5nghbrs)({gensim_model})(Rndm)(-blacklist)",
                     ),
                     (
-                        0.25,
+                        0.35,
                         "Nghbhood Degrees - Lemmas (.5decay,1topn,5nghbrs)({gensim_model})(Rndm)(-blacklist)",
+                    ),
+                    (
+                        0.05,
+                        "Nghbhood Degrees - Lemmas (no-decay,no-topn,8nghbrs)({gensim_model})(Rndm)(-blacklist)",
+                    ),
+                    (
+                        0.02,
+                        "Nghbhood Degrees - Lemmas (no-decay,4topn,8nghbrs)({gensim_model})(Rndm)(-blacklist)",
+                    ),
+                    (
+                        0.16,
+                        "Nghbhood Degrees - Lemmas (no-decay,1topn,8nghbrs)({gensim_model})(Rndm)(-blacklist)",
+                    ),
+                    (
+                        0.19,
+                        "Nghbhood Degrees - Lemmas (.5decay,no-topn,8nghbrs)({gensim_model})(Rndm)(-blacklist)",
+                    ),
+                    (
+                        0.8,
+                        "Nghbhood Degrees - Lemmas (.5decay,4topn,8nghbrs)({gensim_model})(Rndm)(-blacklist)",
                     ),
                 ],
             ),
@@ -332,7 +408,7 @@ GENERATION_FEATURE_PARAMS = [
     (0.13, [(1.0, "Topical Proximity - Condescension ({gensim_model})")]),
     (0.13, [(1.0, "Topical Proximity - Intoxication ({gensim_model})")]),
     (0.12, [(1.0, "Topical Proximity - Gratitude ({gensim_model})")]),
-    (0.08, [(1.0, "Topical Proximity - SciFi Creature ({gensim_model})")]),
+    (0.05, [(1.0, "Topical Proximity - SciFi Creature ({gensim_model})")]),
     (0.08, [(1.0, "Topical Proximity - Generic Emotion ({gensim_model})")]),
     (0.13, [(1.0, "Topical Proximity - Fancy Science ({gensim_model})")]),
     (0.08, [(1.0, "Topical Proximity - Food ({gensim_model})")]),
@@ -383,21 +459,28 @@ GENERATION_MODEL_PARAMS = [
         },
     ),
     (
-        0.9,
+        1.1,
         XGBClassifier,
         {
             "random_state": [(1.0, RANDOM_SEED)],
-            "max_depth": [(0.2, 3), (0.6, 4), (0.1, 5), (0.05, 6)],
+            "max_depth": [
+                (0.1, 3),
+                (0.4, 4),
+                (0.35, 5),
+                (0.1, 6),
+                (0.05, 7),
+                (0.05, 11),
+            ],
             "objective": [(0.5, "multi:softmax"), (0.5, "multi:softprob")],
             "num_class": [(1, 5)],
             "n_estimators": [
                 (0.2, 23),
-                (0.3, 35),
+                (0.2, 35),
                 (0.2, 45),
                 (0.1, 60),
                 (0.1, 80),
-                (0.05, 100),
-                (0.05, 137),
+                (0.2, 100),
+                (0.2, 137),
             ],
             # Minimum sum of instance weight needed in a child
             "min_child_weight": [(0.5, 1), (0.3, 2), (0.1, 3), (0.1, 4)],
@@ -430,8 +513,8 @@ GENERATION_MODEL_PARAMS = [
             "booster": [(0.5, "gbtree"), (0.4, "gblinear"), (0.1, "dart")],
             "eta": [(0.2, 0.15), (0.2, 0.2), (0.2, 0.3), (0.2, 0.4), (0.2, 0.55)],
             "eval_metric": [
-                (0.4, f1_macro),
-                (0.2, "mlogloss"),
+                (0.3, f1_macro),
+                (0.3, "mlogloss"),
                 (0.3, "map"),
                 (0.1, "mphe"),
             ],
@@ -512,6 +595,20 @@ def generate_experiments(n: int) -> List[ConfiguredExperiment]:
         selected_item = random.choices(group, weights=weights, k=1)[0]
         return selected_item
 
+    def _add_noise_to_value(val: Union[int, float, str]):
+        if not isinstance(val, int) and not isinstance(val, float):
+            return val
+        is_int = isinstance(val, int)
+        percent_addition = random.choice([0.1, 0.0, 0.0, 0.1, 0.15, 0.2, 0.29])
+        adjustment_is_negative = random.random() < 0.5
+        addition = val * percent_addition
+        if adjustment_is_negative:
+            addition *= -1
+        if is_int:
+            return val + int(addition)
+        else:
+            return np.round(val + addition, 2)
+
     experiments = []
     for _ in range(n):
         # Build a set of feature extractors
@@ -529,7 +626,7 @@ def generate_experiments(n: int) -> List[ConfiguredExperiment]:
                     gensim_model=gensim_model_slug
                 )
             if feature_extractor_name not in FEATURE_EXTRACTORS:
-                raise ValueError(  # Liekly due to slight mismatch in manually typed string
+                raise ValueError(  # Likely due to slight mismatch in manually typed string
                     f"Feature extractor {feature_extractor_name} not found in `FEATURE_EXTRACTORS`."
                 )
             feature_combo.append(feature_extractor_name)
@@ -548,7 +645,10 @@ def generate_experiments(n: int) -> List[ConfiguredExperiment]:
         model_type = selection[1]
         model_kwargs = {}
         for param_name, param_group in selection[2].items():
-            model_kwargs[param_name] = _select_from_group(param_group)[1]
+            param_value = _select_from_group(param_group)[1]
+            if param_name != "num_class":
+                param_value = _add_noise_to_value(param_value)
+            model_kwargs[param_name] = param_value
         # Manually avoid some impossible parameter combinations
         if model_type == LogisticRegression:
             model_kwargs["max_iter"] = 1400
@@ -683,11 +783,11 @@ MANUALLY_CONFIGURED_EXPERIMENTS = [
     ),
 ]
 
-GENERATED_EXPERIMENTS = generate_experiments(30)
+GENERATED_EXPERIMENTS = generate_experiments(0)  # 1200
 
-EXPERIMENTS = (
-    BASELINE_EXPERIMENTS + MANUALLY_CONFIGURED_EXPERIMENTS + GENERATED_EXPERIMENTS
-)
+EXPERIMENTS = []  # (
+#     BASELINE_EXPERIMENTS + MANUALLY_CONFIGURED_EXPERIMENTS + GENERATED_EXPERIMENTS
+# )
 
 for experiment in EXPERIMENTS:
     rich.inspect(experiment)

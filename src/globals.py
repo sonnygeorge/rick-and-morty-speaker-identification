@@ -71,6 +71,8 @@ WORD_CLUSTERS = {
 # Highly specific tokens that to my intuition/domain knowledge...
 # ...seem likely to cause overfitting to the training data
 TOKEN_BLACKLIST = {
+    "d",
+    "c",
     "yyyyyyyyyyou",
     "vindicator",
     "vindicators",
@@ -136,6 +138,21 @@ FAMILIAL_WORDS_AND_COMMON_NAMES = {
     "jesus",
     "christ",
     "um",
+    "uh",
+    "married",
+    "grampa",
+    "honey",
+    "you",
+    "i",
+    "me",
+    "our",
+    "your",
+    "we",
+    "my",
+    "parent",
+    "parents",
+    "wife",
+    "husband",
 }
 
 HAND_SELECTED_POS_BIGRAMS = {

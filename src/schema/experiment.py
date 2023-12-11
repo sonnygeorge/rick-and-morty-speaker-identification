@@ -1,4 +1,4 @@
-from typing import Type, Literal, Dict, Optional, Tuple, Set
+from typing import Type, Literal, Dict, Optional, Set
 from time import perf_counter
 from collections import defaultdict
 import os
@@ -38,7 +38,6 @@ class Experiment:
         self.spacy_model_name = spacy_model_name
         self.feature_extractors = feature_extractors
         self.use_by_episode_splits = use_by_episode_splits
-        self.avg_feature_extraction_time = None
         self.model_type = model_type
         self.model = model_type(**model_kwargs)
         self.features: pd.DataFrame = None
@@ -87,20 +86,33 @@ class Experiment:
     def run(self) -> None:
         print("🚀 Extracting features...")
         # Extract features
-        start = perf_counter()
-        feature_dicts = self.docs.index.map(self._extract_features_from_doc)
-        self.avg_feature_extraction_time = (perf_counter() - start) / len(self.docs)
-        dict_vectorizer = (
-            DictVectorizer()
-        )  # FIXME: Fit transform on train only / transform others?
-        self.features = pd.DataFrame(
-            dict_vectorizer.fit_transform(feature_dicts).toarray(),
-            index=self.docs.index,
+        feature_dicts = pd.Series(self.docs.index.map(self._extract_features_from_doc))
+        test_feature_dicts = feature_dicts[self.train_test_dev == "test"]
+        dev_feature_dicts = feature_dicts[self.train_test_dev == "dev"]
+        train_feature_dicts = feature_dicts[self.train_test_dev == "train"]
+        # Vectorize
+        dict_vectorizer = DictVectorizer()
+        train_features = pd.DataFrame.sparse.from_spmatrix(
+            dict_vectorizer.fit_transform(train_feature_dicts),
+            index=train_feature_dicts.index,
             columns=dict_vectorizer.feature_names_,
         )
-        # Train model
-        train_features = self.features[self.train_test_dev == "train"]
+        test_features = pd.DataFrame.sparse.from_spmatrix(
+            dict_vectorizer.transform(test_feature_dicts),
+            index=test_feature_dicts.index,
+            columns=dict_vectorizer.feature_names_,
+        )
+        dev_features = pd.DataFrame.sparse.from_spmatrix(
+            dict_vectorizer.transform(dev_feature_dicts),
+            index=dev_feature_dicts.index,
+            columns=dict_vectorizer.feature_names_,
+        )
+        self.features = pd.concat([train_features, dev_features, test_features], axis=0)
+        # Separate labels
+        test_labels = self.labels[self.train_test_dev == "test"]
+        dev_labels = self.labels[self.train_test_dev == "dev"]
         train_labels = self.labels[self.train_test_dev == "train"]
+        # Train model
         start = perf_counter()
         print("🚀 Beginning training...")
         self.model.fit(X=train_features, y=train_labels)
@@ -112,8 +124,6 @@ class Experiment:
                 scorer(train_labels, train_predictions), 3
             )
         # Score model on dev set
-        dev_features = self.features[self.train_test_dev == "dev"]
-        dev_labels = self.labels[self.train_test_dev == "dev"]
         dev_predictions = pd.Series(
             self.model.predict(dev_features), index=dev_labels.index
         )
@@ -126,8 +136,6 @@ class Experiment:
         self.incorrect_preds = dev_predictions[dev_predictions != dev_labels]
         self.incorrect_labels = dev_labels[dev_predictions != dev_labels]
         # Score model on test set
-        test_features = self.features[self.train_test_dev == "test"]
-        test_labels = self.labels[self.train_test_dev == "test"]
         test_predictions = self.model.predict(test_features)
         for name, scorer in SCORERS.items():
             self.test_scores[name] = np.round(scorer(test_labels, test_predictions), 3)
@@ -170,7 +178,6 @@ class Experiment:
         for metric, score in self.test_scores.items():
             print(f"\t\t- {metric}: {score}")
         print("  - Times (s):")
-        print(f"\tAvg. Feature Extraction: {self.avg_feature_extraction_time:.4f}")
         print(f"\tModel Training: {self.model_train_time:.3f}")
 
     def save_markdown_report(self) -> None:
@@ -231,10 +238,13 @@ class Experiment:
             else:
                 importances = {}
                 for extractor_name in self.feature_extractors.keys():
-                    importance = self.importances[
-                        list(self.feature_names_by_extractor[extractor_name])
-                    ].sum()
-                    importances[extractor_name] = importance
+                    all_importances_for_extractor = []
+                    for feature in self.feature_names_by_extractor[extractor_name]:
+                        if feature in self.importances:
+                            all_importances_for_extractor.append(
+                                self.importances[feature]
+                            )
+                    importances[extractor_name] = np.sum(all_importances_for_extractor)
                 sorted_importances = sorted(
                     importances.items(), key=lambda x: x[1], reverse=True
                 )
