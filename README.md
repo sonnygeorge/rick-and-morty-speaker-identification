@@ -8,6 +8,10 @@ A journey in text classification.
 
 Classifying the speaker of an isolated Rick & Morty utterance is a difficult task. For example, my roommate, a die-hard Rick & Morty fan, was only 60% accurate when presented with a shuffled random sample of 80 instances. Furthermore, with only 11 episodes-worth of data, it was very hard not to overfit to the specific quirks of the episodes (E.g. tokens associated with one-off, character-specific side quests). Nevertheless, introducing the custom, word-embedding-based feature _"Neighborhood Degrees of Presence"_, as well as restricting unigram-based features to only familial words and common names proved to be the crucial moments that pushed performance to near-human level.
 
+**Streamlit App**:
+
+[rick-and-morty-speaker-identification](https://rick-and-morty-speaker-identification.streamlit.app)
+
 **Key Files**:
 
 ```python
