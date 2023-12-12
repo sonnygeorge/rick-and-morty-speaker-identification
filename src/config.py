@@ -10,19 +10,23 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.tree import DecisionTreeClassifier
 from xgboost import XGBClassifier
 
-from src.feature_extractors import (all_n_gram_counts, all_n_gram_one_hots,
-                                    avg_root_verb_embedding, avg_token_length,
-                                    avg_tokens_per_sentence,
-                                    dashes_per_sentence,
-                                    exclamation_marks_per_sentence,
-                                    get_counts_of_hand_selected_pos_n_grams,
-                                    neighborhood_degrees_of_presence,
-                                    pos_tag_n_gram_counts,
-                                    proportion_alpha_chars_capitalized,
-                                    proportion_stop_words,
-                                    question_marks_per_sentence,
-                                    topical_proximity_score,
-                                    total_sentence_count)
+from src.feature_extractors import (
+    all_n_gram_counts,
+    all_n_gram_one_hots,
+    avg_root_verb_embedding,
+    avg_token_length,
+    avg_tokens_per_sentence,
+    dashes_per_sentence,
+    exclamation_marks_per_sentence,
+    get_counts_of_hand_selected_pos_n_grams,
+    neighborhood_degrees_of_presence,
+    pos_tag_n_gram_counts,
+    proportion_alpha_chars_capitalized,
+    proportion_stop_words,
+    question_marks_per_sentence,
+    topical_proximity_score,
+    total_sentence_count,
+)
 from src.globals import FAMILIAL_WORDS_AND_COMMON_NAMES, RANDOM_SEED
 from src.helpers import RickPredictor
 from src.schema.configured_experiment import ConfiguredExperiment
@@ -668,7 +672,7 @@ def generate_experiments(n: int) -> List[ConfiguredExperiment]:
 
 BASELINE_EXPERIMENTS: List[ConfiguredExperiment] = [
     ConfiguredExperiment(
-        feature_extractor_names=["Total Sentence Count"],
+        feature_extractor_names=["Total Sentence Count"],  # Just to not be empty
         spacy_model_name="en_core_web_sm",
         use_by_episode_splits=False,
         model_type=RickPredictor,
@@ -776,45 +780,47 @@ MANUALLY_CONFIGURED_EXPERIMENTS = [
     ),
 ]
 
-FEATURE_EXTRACTORS.update(
-    {
-        "Nghbhood Degrees - Lemmas (.5decay,4topn,5nghbrs)(glove-wiki-gigaword-50)(Rndm)(-blacklist)": partial(
-            neighborhood_degrees_of_presence,
-            gensim_model_slug="glove-wiki-gigaword-50",
-            weight_decay_rate=0.5,
-            n_neighbors=5,
-            lemmatize=True,
-            max_top_n=4,
-            save_neighborhoods=True,
-        )
-    }
-)
+# Uncoomment this to run Logistic Regression 441 and save the neighborhoods and model
 
-BEST_EXPERIMENT = ConfiguredExperiment(
-    feature_extractor_names=[
-        "Average Word Length",
-        "Question Marks Per Sentence",
-        "Exclamation Marks Per Sentence",
-        "Dashes Per Sentence",
-        "Familial Words & Common Names 1-Gram One Hots",
-        "Hand-Selected POS-Tag N-Gram Counts",
-        "Proportion Of Tokens That Are Stop Words",
-        "Proportion Of Chars That Are Capitalized",
-        "Nghbhood Degrees - Lemmas (.5decay,4topn,5nghbrs)(glove-wiki-gigaword-50)(Rndm)(-blacklist)",
-    ],
-    spacy_model_name="en_core_web_sm",
-    save_model=True,
-    model_type=LogisticRegression,
-    penalty="l2",
-    C=1.94,
-    solver="lbfgs",
-    random_state=36,
-    max_iter=1400,
-)
+# FEATURE_EXTRACTORS.update(
+#     {
+#         "Nghbhood Degrees - Lemmas (.5decay,4topn,5nghbrs)(glove-wiki-gigaword-50)(Rndm)(-blacklist)": partial(
+#             neighborhood_degrees_of_presence,
+#             gensim_model_slug="glove-wiki-gigaword-50",
+#             weight_decay_rate=0.5,
+#             n_neighbors=5,
+#             lemmatize=True,
+#             max_top_n=4,
+#             save_neighborhoods=True,
+#         )
+#     }
+# )
+
+# BEST_EXPERIMENT = ConfiguredExperiment(
+#     feature_extractor_names=[
+#         "Average Word Length",
+#         "Question Marks Per Sentence",
+#         "Exclamation Marks Per Sentence",
+#         "Dashes Per Sentence",
+#         "Familial Words & Common Names 1-Gram One Hots",
+#         "Hand-Selected POS-Tag N-Gram Counts",
+#         "Proportion Of Tokens That Are Stop Words",
+#         "Proportion Of Chars That Are Capitalized",
+#         "Nghbhood Degrees - Lemmas (.5decay,4topn,5nghbrs)(glove-wiki-gigaword-50)(Rndm)(-blacklist)",
+#     ],
+#     spacy_model_name="en_core_web_sm",
+#     save_model=True,
+#     model_type=LogisticRegression,
+#     penalty="l2",
+#     C=1.94,
+#     solver="lbfgs",
+#     random_state=36,
+#     max_iter=1400,
+# )
 
 
 GENERATED_EXPERIMENTS = generate_experiments(0)  # 1200
 
-EXPERIMENTS = [BEST_EXPERIMENT]  # (
+EXPERIMENTS = []  # (
 #     BASELINE_EXPERIMENTS + MANUALLY_CONFIGURED_EXPERIMENTS + GENERATED_EXPERIMENTS
 # )
