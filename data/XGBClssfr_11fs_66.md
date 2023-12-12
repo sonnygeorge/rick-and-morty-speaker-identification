@@ -1,16 +1,16 @@
 ### 🚀 **XGBClssfr_11fs_66**
 
-- 🤖 **Model Type**: 
+- 🤖 **Model Type**:
 	<class 'xgboost.sklearn.XGBClassifier'>
-- 📊 **Dataset Used**: 
+- 📊 **Dataset Used**:
 	_Random_
-- 🧠 **Number of Features**: 
+- 🧠 **Number of Features**:
 	1355
-- 🚫 **Unused Features**: 
+- 🚫 **Unused Features**:
 	371/1355
-- ⌛ **Model Train Time**: 
+- ⌛ **Model Train Time**:
 	13.279
-- 💬 **SpaCy Preprocessing Model**: 
+- 💬 **SpaCy Preprocessing Model**:
 	`en_core_web_sm`
 
 - 🧬 **Model Hyperparameters**:

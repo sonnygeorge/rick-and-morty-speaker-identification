@@ -1,16 +1,16 @@
 ### 🚀 **LgstcRgrssn_11fs_111**
 
-- 🤖 **Model Type**: 
+- 🤖 **Model Type**:
 	<class 'sklearn.linear_model._logistic.LogisticRegression'>
-- 📊 **Dataset Used**: 
+- 📊 **Dataset Used**:
 	_Random_
-- 🧠 **Number of Features**: 
+- 🧠 **Number of Features**:
 	1372
-- 🚫 **Unused Features**: 
+- 🚫 **Unused Features**:
 	2/1372
-- ⌛ **Model Train Time**: 
+- ⌛ **Model Train Time**:
 	2.514
-- 💬 **SpaCy Preprocessing Model**: 
+- 💬 **SpaCy Preprocessing Model**:
 	`en_core_web_sm`
 
 - 🧬 **Model Hyperparameters**:

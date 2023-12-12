@@ -1,19 +1,31 @@
+import json
 import os
+import pickle
 import re
 from collections import defaultdict
+from functools import partial
 from time import perf_counter
-from typing import Dict, Literal, Optional, Set, Type
+from typing import Callable, Dict, Literal, Optional, Set, Type
 
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator
 from sklearn.feature_extraction import DictVectorizer
-from sklearn.metrics import classification_report
+from sklearn.metrics import accuracy_score, classification_report, f1_score
 from sklearn.preprocessing import LabelEncoder
 from spacy.tokens import Doc
 
-from src.globals import DATA_DIR_PATH, RESULTS_CSV_FPATH, SCORERS
+from src.globals import (DATA_DIR_PATH, FEATURE_COLS_FPATH, MODEL_FPATH,
+                         RESULTS_CSV_FPATH)
 from src.schema.feature_extractor import FeatureExtractor
+
+macro_f1_score = partial(f1_score, average="macro")
+micro_f1_score = partial(f1_score, average="micro")
+
+SCORERS: Dict[str, Callable[[np.ndarray, np.ndarray], float]] = {
+    "Accuracy": accuracy_score,
+    "Macro F1": macro_f1_score,
+}
 
 
 class Experiment:
@@ -28,6 +40,7 @@ class Experiment:
         use_by_episode_splits: bool,
         model_type: Type[BaseEstimator],
         name: Optional[str] = None,
+        save_model: bool = True,
         **model_kwargs,
     ):
         self.docs = docs
@@ -52,6 +65,7 @@ class Experiment:
         self.incorrect_preds: Optional[pd.Series] = None
         self.incorrect_labels: Optional[pd.Series] = None
         self.feature_names_by_extractor: Dict[str, Set[str]] = defaultdict(set)
+        self.save_model = save_model
         self.model_params = model_kwargs
         if name is None:
             name = self._generate_base_name()
@@ -158,6 +172,13 @@ class Experiment:
         self.test_classification_report = classification_report(
             test_labels, test_predictions, output_dict=True
         )
+        # Save model
+        if self.save_model:
+            with open(MODEL_FPATH, "wb") as f:
+                pickle.dump(self.model, f)
+            with open(FEATURE_COLS_FPATH, "w") as f:
+                columns_list = list(self.features.columns)
+                json.dump(columns_list, f)
 
     def print_results(self) -> None:
         print(f"\n=== {self.name} Results ===\n")

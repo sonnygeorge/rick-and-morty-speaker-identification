@@ -214,7 +214,7 @@ SCIFI_CREATURE_WORDS = [
     "clone",
 ]
 
-GENERIC_EMOTIION_WORDS = [
+GENERIC_EMOTION_WORDS = [
     "feel",
     "love",
     "happy",

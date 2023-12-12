@@ -1,4 +1,4 @@
-"""Streamlit app for exploring the experiment results."""
+"""Streamlit app for exploring the experiment results... a bit of a code-barf."""
 
 import os
 
@@ -8,13 +8,37 @@ import streamlit as st
 from matplotlib import transforms
 from matplotlib.patheffects import withStroke
 
+from src.run_inference import run_inference
+
 DATA_DIR_PATH = "data"
 RESULTS_CSV_FNAME = "results.csv"
 RESULTS_CSV_FPATH = os.path.join(DATA_DIR_PATH, RESULTS_CSV_FNAME)
-IMG_URL = "https://variety.com/wp-content/uploads/2022/08/Rick-and-Morty-Season-6.png?"
 RICK_ONLY_NAME = "Rick-Only"
 UNIGRAM_ONE_HOT_NAME = "Unigram One-Hot"
 MAX_TOP_N = 5
+
+HEADER_IMG_URL = "https://oyster.ignimgs.com/wordpress/stg.ign.com/2013/12/rickandmorty02_120213_1600.jpg?width=3840"
+RICK_IMG_URL = "https://static.wikia.nocookie.net/ricksanchez/images/7/71/Rick.jpg/"
+MORTY_IMG_URL = (
+    "https://static.wikia.nocookie.net/rickandmorty/images/e/ee/Morty501.png/"
+)
+BETH_IMG_URL = (
+    "https://static.wikia.nocookie.net/rickandmorty/images/5/58/Beth_Smith.png/"
+)
+SUMMER_IMG_URL = (
+    "https://static.wikia.nocookie.net/rickandmorty/images/a/ad/Summer_is_cool.jpeg/"
+)
+JERRY_IMG_URL = (
+    "https://static.wikia.nocookie.net/rickandmorty/images/f/f1/Jerry_Smith.png/"
+)
+
+IMG_URLS_BY_LABEL = {
+    "Rick": RICK_IMG_URL,
+    "Morty": MORTY_IMG_URL,
+    "Beth": BETH_IMG_URL,
+    "Summer": SUMMER_IMG_URL,
+    "Jerry": JERRY_IMG_URL,
+}
 
 _READABLE_NAME_MAP = {
     "LgstcRgrssn": "Logistic Regression",
@@ -35,7 +59,7 @@ _model_counts = {
 }
 
 NAMES_TO_HIGHLIGHT = [
-    # "Logistic Regression 441",  # THE BEST
+    "Logistic Regression 441",  # THE BEST
 ]
 
 COLORS = {
@@ -87,7 +111,8 @@ SCORES_DF = SCORES_DF.drop(
 SCORES_DF = SCORES_DF[~SCORES_DF.index.str.contains("Decision Tree")]
 SCORES_DF = SCORES_DF[~SCORES_DF.index.str.contains("Random Forest")]
 
-## Uncomment if yoou want to delete excess .md from data folder
+# Uncomment if you want to delete excess .md from data folder
+
 # for readable, slug in NAME_MAP.items():
 #     if "Rick-Only" in readable or "Unigram One-Hot" in readable:
 #         print(f"Skipping {readable}")
@@ -220,17 +245,44 @@ def handle_experiment_selection(selection):
 
 
 # Declare Streamlit app
-st.title("Rick & Morty Speaker Identification")
-st.image(IMG_URL)
+st.header("Rick & Morty Speaker Identification", divider=True, anchor="center")
+st.image(HEADER_IMG_URL)
 st.markdown(
     "An interactive applet for exploring the results of [this](https://github.com/sonnygeorge/rick-and-morty-speaker-identification) project."
 )
+st.header("Run inference on your own text!", divider=True, anchor="center")
+st.text("NOTE:")
+st.markdown(
+    """
+Performance is severely hindered by:
+- Being restricted to only token/n-gram-based features (E.g. no "sentence" embeddings).
+- Only training on around 10 episodes.
+
+See the [writeup](https://github.com/sonnygeorge/rick-and-morty-speaker-identification) for more details.
+"""
+)
 st.divider()
-st.header("Comparison of Top Experiment Results")
+col1, col2 = st.columns([1, 2])
+with col2:
+    st.text("")
+    st.text("")
+    st.markdown("Model in use: `Logistic Regression 441`")
+    st.text("")
+    text_input = st.text_input(
+        "Enter your text here:", "Morty I'm a drunk, not a hack."
+    )
+    st.text("")
+    button = st.button("Predict Speaker")
+    st.text("(Takes a couple of seconds)")
+with col1:
+    image = st.image(IMG_URLS_BY_LABEL["Rick"])
+if button:
+    predicted = run_inference(text_input)
+    image.image(IMG_URLS_BY_LABEL[predicted])
+st.divider()
+st.header("Comparison of top experiment results", divider=True, anchor="center")
 st.text(f"Number of experiments run: {N_EXPERIMENTS}")
 st.pyplot(plot_scores())
-st.divider()
-st.header("Explore Experiments")
+st.header("Explore Experiments", divider=True, anchor="center")
 selection = st.selectbox("Select an experiment:", SCORES_DF.index)
-st.divider()
 handle_experiment_selection(selection)

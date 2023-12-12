@@ -1,16 +1,16 @@
-### 🚀 **LgstcRgrssn_9fs_78**
+### 🚀 **LgstcRgrssn_9fs_108**
 
-- 🤖 **Model Type**:
+- 🤖 **Model Type**: 
 	<class 'sklearn.linear_model._logistic.LogisticRegression'>
-- 📊 **Dataset Used**:
+- 📊 **Dataset Used**: 
 	_Random_
-- 🧠 **Number of Features**:
-	1441
-- 🚫 **Unused Features**:
-	84/1441
-- ⌛ **Model Train Time**:
-	2.179
-- 💬 **SpaCy Preprocessing Model**:
+- 🧠 **Number of Features**: 
+	1449
+- 🚫 **Unused Features**: 
+	82/1449
+- ⌛ **Model Train Time**: 
+	6.811
+- 💬 **SpaCy Preprocessing Model**: 
 	`en_core_web_sm`
 
 - 🧬 **Model Hyperparameters**:
@@ -25,16 +25,16 @@
 
 | Metric | Train | Dev | Test |
 | ------ | ----- | --- | ---- |
-| Accuracy | 0.871 | 0.555 | 0.515 |
-| Macro F1 | 0.858 | 0.425 | 0.405 |
+| Accuracy | 0.873 | 0.555 | 0.515 |
+| Macro F1 | 0.862 | 0.425 | 0.405 |
 
 #### Classification Report (Dev Set)
 
 | Label | Precision | Recall | F1-Score |
 | ----- | --------- | ------ | -------- |
-| Beth | 0.38 | 0.25 | 0.30 |
-| Jerry | 0.31 | 0.28 | 0.29 |
-| Morty | 0.49 | 0.59 | 0.54 |
+| Beth | 0.36 | 0.25 | 0.29 |
+| Jerry | 0.29 | 0.28 | 0.29 |
+| Morty | 0.51 | 0.59 | 0.55 |
 | Rick | 0.71 | 0.73 | 0.72 |
 | Summer | 0.27 | 0.27 | 0.27 |
 
@@ -81,7 +81,7 @@
 | I am not putting my father in a home! He just came back into my life, and you want to grab him and stuff him under a mattress like last month's Victoria's Secret? | Rick | Beth |
 | Morty, Mom's talking. I'm sorry, I suppose that's a good segue into our little discipline cases here. | Rick | Beth |
 | Yes I will! That's right, assholes, take my penis, TAKE IT ALL! And tell Shrimply Pimples that when the galaxy came calling Jerry Smith from Earth didn't flinch! | Summer | Jerry |
-| You don’t have to be a dick. | Morty | Rick |
+| You don’t have to be a dick. | Jerry | Rick |
 | I am sad that I peed. I'm sad that I peed in class instead of a toilet. | Rick | Morty |
 | Hello? Is anybody here?  Mr. President! | Summer | Morty |
 | I'm sorry. It's just like the end of "Old Yeller. | Rick | Jerry |
@@ -124,7 +124,7 @@
 | What? Why are you looking at me? You want to go outside? Outside? | Beth | Jerry |
 | This article says the reason we weren't involved was... "personality conflicts". | Rick | Morty |
 | Doesn't feel so good, does it? | Jerry | Morty |
-| I AM a baby! I’m a baby NOW! | Morty | Jerry |
+| I AM a baby! I’m a baby NOW! | Beth | Jerry |
 | Oldest Rick trick in the book. | Morty | Rick |
 | Listen, Rick, if you're gonna stay here rent-free and use my son for your stupid science, the least you could do is put a little bit of it to use for the family. You make that dog smart or Morty's grounded! | Rick | Jerry |
 | Alright. I'll-I'll land. I'll land. I'll land. I'll land the thing. I’ll land the thing. Big tough guy all of a sudden. | Jerry | Rick |
@@ -137,7 +137,7 @@
 | Now hold on a second, let’s be rational about this. | Rick | Beth |
 ### 📉 Unused Features
 
-84/1441 features were unused.
+82/1449 features were unused.
 
 | Feature | Coefficient |
 | ------- | ----------- |
@@ -160,6 +160,8 @@
 | 'ADV VERB' | 0.0 |
 | 'AUX ADP PRON' | 0.0 |
 | ... | ... |
+| 'PUNCT PRON AUX' | 0.0 |
+| 'PUNCT PRON PROPN' | 0.0 |
 | 'PUNCT PRON VERB' | 0.0 |
 | 'PUNCT PRON' | 0.0 |
 | 'PUNCT PROPN PUNCT' | 0.0 |
@@ -176,5 +178,3 @@
 | 'VERB PRON' | 0.0 |
 | 'VERB PROPN' | 0.0 |
 | 'VERB PUNCT' | 0.0 |
-| has(married) | 0.0 |
-| has(sister) | 0.0 |

@@ -1,13 +1,8 @@
 import os
-from functools import partial
-from typing import Callable, Dict
-
-import numpy as np
-from sklearn.metrics import accuracy_score, f1_score
 
 from src.word_clusters import (CONDESCENSION_WORDS, DEATH_WORDS, DUBIETY_WORDS,
                                FANCY_SCIENCE_WORDS, FOOD_WORDS,
-                               GENERIC_EMOTIION_WORDS, GRATITUDE_WORDS,
+                               GENERIC_EMOTION_WORDS, GRATITUDE_WORDS,
                                INTOXICATION_WORDS, SCIFI_CREATURE_WORDS,
                                SEXUAL_WORDS)
 
@@ -19,9 +14,11 @@ TEST_STR = "test"
 RANDOM_STR = "random"
 BY_EPISODE_STR = "by_episode"
 RESULTS_CSV_FNAME = "results.csv"
-
 RAW_SCRIPT_DATA_FPATH = os.path.join(DATA_DIR_PATH, RAW_SCRIPT_DATA_FNAME)
 RESULTS_CSV_FPATH = os.path.join(DATA_DIR_PATH, RESULTS_CSV_FNAME)
+NEIGHBORHOODS_FPATH = os.path.join(DATA_DIR_PATH, "neighborhoods.json")
+FEATURE_COLS_FPATH = os.path.join(DATA_DIR_PATH, "feature_cols.json")
+MODEL_FPATH = "model.pickle"
 
 
 RANDOM_SEED = 42
@@ -34,13 +31,6 @@ SANCHEZ_FAMILY_LABELS = {
     "Summer",
 }
 
-macro_f1_score = partial(f1_score, average="macro")
-micro_f1_score = partial(f1_score, average="micro")
-
-SCORERS: Dict[str, Callable[[np.ndarray, np.ndarray], float]] = {
-    "Accuracy": accuracy_score,
-    "Macro F1": macro_f1_score,
-}
 
 START_TOKEN = "<START>"
 END_TOKEN = "<END>"
@@ -56,7 +46,7 @@ WORD_CLUSTERS = {
     "Intoxication": INTOXICATION_WORDS,
     "Gratitude": GRATITUDE_WORDS,
     "SciFi Creature": SCIFI_CREATURE_WORDS,
-    "Generic Emotion": GENERIC_EMOTIION_WORDS,
+    "Generic Emotion": GENERIC_EMOTION_WORDS,
     "Fancy Science": FANCY_SCIENCE_WORDS,
     "Food": FOOD_WORDS,
 }

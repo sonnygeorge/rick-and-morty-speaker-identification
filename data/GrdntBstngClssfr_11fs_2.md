@@ -1,16 +1,16 @@
 ### 🚀 **GrdntBstngClssfr_11fs_2**
 
-- 🤖 **Model Type**: 
+- 🤖 **Model Type**:
 	<class 'sklearn.ensemble._gb.GradientBoostingClassifier'>
-- 📊 **Dataset Used**: 
+- 📊 **Dataset Used**:
 	_Random_
-- 🧠 **Number of Features**: 
+- 🧠 **Number of Features**:
 	1605
-- 🚫 **Unused Features**: 
+- 🚫 **Unused Features**:
 	122/1605
-- ⌛ **Model Train Time**: 
+- ⌛ **Model Train Time**:
 	123.885
-- 💬 **SpaCy Preprocessing Model**: 
+- 💬 **SpaCy Preprocessing Model**:
 	`en_core_web_sm`
 
 - 🧬 **Model Hyperparameters**:

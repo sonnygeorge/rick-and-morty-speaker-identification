@@ -1,16 +1,18 @@
-# Rick & Morty Speaker Identification
+# 🚀 Rick & Morty Speaker Identification
 
 A journey in text classification.
 
-(Fulfilling project requirements for COSI114a at Brandeis University, which prohibits using contextual embeddings and neural classifiers)
+(Fulfilling project requirements for COSI114a at Brandeis University, **which prohibits using contextual embeddings and neural classifiers**)
 
 **TLDR**:
 
-Classifying the speaker of an isolated Rick & Morty utterance is a difficult task. For example, my roommate, a die-hard Rick & Morty fan, was only 60% accurate when presented with a shuffled random sample of 80 instances. Furthermore, with only 11 episodes-worth of data, it was very hard not to overfit to the specific quirks of the episodes (E.g. tokens associated with one-off, character-specific side quests). Nevertheless, introducing the custom, word-embedding-based feature _"Neighborhood Degrees of Presence"_, as well as restricting unigram-based features to only familial words and common names proved to be the crucial moments that pushed performance to near-human level.
+Classifying the speaker of an isolated Rick & Morty utterance is a difficult task. For example, my roommate, a die-hard Rick & Morty fan, was only 60% accurate when given a shuffled random sample of 80 instances. Furthermore, with only 11 episodes-worth of data, it was very hard not to overfit to the specific quirks of the episodes (E.g. tokens associated with one-off, character-specific side quests). Nevertheless, introducing the custom, word-embedding-based feature _"Neighborhood Degrees of Presence"_, as well as restricting unigram counts/one-hots to only familial words and common names proved to be the crucial moments that pushed performance to near-human level.
 
 **Streamlit App**:
 
 [rick-and-morty-speaker-identification](https://rick-and-morty-speaker-identification.streamlit.app)
+
+![Streamlit Demo](streamlit_demo.gif)
 
 **Key Files**:
 
@@ -24,7 +26,11 @@ Classifying the speaker of an isolated Rick & Morty utterance is a difficult tas
 ...
 ```
 
-## The Task at Hand
+**Disclaimers**:
+
+- Code is not at all production-ready & was hastily done in about two weeks.
+
+## 💁 The Task at Hand
 
 With nothing but an _isolated_ utterance from the TV show Rick and Morty, can we detect who the speaker was? Take the following utterance for example:
 
@@ -38,7 +44,7 @@ If you guessed Beth, you'd be correct! (Season 2, Episode 5). But don't worry, I
 
 The point is... this is a hard task... perhaps, in many cases, impossible. Before we try and get a computer to do it, we need to relativize our expectations.
 
-## Roommate Benchmark
+## 🎯 Roommate Benchmark
 
 After pulling [this](https://huggingface.co/datasets/ysharma/rickandmorty) dataset, filtering it to just the Sanchez/Smith family members, and splitting it into train/dev/test sets, I randomly sampled 80 utterances from the dev set, shuffled them, and asked my roomate (who "loves" Rick & Morty) to guess their speakers.
 
@@ -48,13 +54,13 @@ Here are his results:
 | --- | --- |
 | .60 | .50 |
 
-## The Data Was Slim Pickin'
+## 🤦 The Data Was Slim Pickin'
 
 Unfortunately, the difficulty of the task wasn't the only daunting obstacle... Our dataset only contained transcriptions from 11 episodes. Yikes! My roommate has seen way more than that!
 
 After fitting a few preliminary models, it was clear that we were having serious problems overfitting to the specifics of the episodes. For example, when using tree-based models (that produce feature importance metrics), one of the recurring important features was the presence of the word "vindicators". If you're familiar with the show, you know that the this is a highly episode-specific reference that would not generalize well to other episodes.
 
-## Familial Words & Common Names
+## 👪 Familial Words & Common Names
 
 To combat this, I made a quick list of familial words and common names and restricted my unigrams to only these.
 
@@ -117,7 +123,7 @@ The basic idea here is that these words would be both highly common across all e
 
 Doing this noticably improved performance, demonstrating both that we were on the right track, and that further fruitful feature engineering would likely be characterized by generalizability.
 
-## Neighborhood Degrees of Presence
+## 🏡 Neighborhood Degrees of Presence
 
 With this discovery as a precedent, I knew I needed to engineer a generalizable way to capture the quintessence of each character's speech patterns as features. Although predicting based of the presence of these specific tokens improved performance, relying on this alone produced a very underwhelming model where utterances that lacked these words would effectively carry no predictive information.
 
@@ -147,7 +153,7 @@ $$O(\text{number of neighborhoods} * \text{number of tokens in utterance})$$
 
 However, I certainly believe there to be other ways to approximate the underlying intention of these features with less overhead.
 
-## Final Experimentation & Hyperparameter Search
+## 🧮 Final Experimentation & Hyperparameter Search
 
 With my both my baselines and a number of feature extraction strategies in place, I was ready to build a big red button and make my cpu go Brrrr.
 
@@ -155,9 +161,9 @@ Thus, I wrote a procedural generation algorithm designed to generate uniquely-co
 
 After running these experiments overnight... (drumroll please)
 
-## Results
+## 📊 Results
 
-I didn't beat my roommate... 💔
+We didn't beat my roommate... 💔
 
 However, we did get pretty close. Here are the dev set results stacked up for the top experiments from select model types:
 
@@ -177,7 +183,7 @@ In order to pick a best model, we need to consider the scores on the train and t
 
 After considering the above for our top models, I believe that the best choice would be the following...
 
-## Chosen Best Model
+## 🏆 Chosen Best Model
 
 ### Logistic Regression 441
 

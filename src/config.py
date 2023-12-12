@@ -776,8 +776,45 @@ MANUALLY_CONFIGURED_EXPERIMENTS = [
     ),
 ]
 
+FEATURE_EXTRACTORS.update(
+    {
+        "Nghbhood Degrees - Lemmas (.5decay,4topn,5nghbrs)(glove-wiki-gigaword-50)(Rndm)(-blacklist)": partial(
+            neighborhood_degrees_of_presence,
+            gensim_model_slug="glove-wiki-gigaword-50",
+            weight_decay_rate=0.5,
+            n_neighbors=5,
+            lemmatize=True,
+            max_top_n=4,
+            save_neighborhoods=True,
+        )
+    }
+)
+
+BEST_EXPERIMENT = ConfiguredExperiment(
+    feature_extractor_names=[
+        "Average Word Length",
+        "Question Marks Per Sentence",
+        "Exclamation Marks Per Sentence",
+        "Dashes Per Sentence",
+        "Familial Words & Common Names 1-Gram One Hots",
+        "Hand-Selected POS-Tag N-Gram Counts",
+        "Proportion Of Tokens That Are Stop Words",
+        "Proportion Of Chars That Are Capitalized",
+        "Nghbhood Degrees - Lemmas (.5decay,4topn,5nghbrs)(glove-wiki-gigaword-50)(Rndm)(-blacklist)",
+    ],
+    spacy_model_name="en_core_web_sm",
+    save_model=True,
+    model_type=LogisticRegression,
+    penalty="l2",
+    C=1.94,
+    solver="lbfgs",
+    random_state=36,
+    max_iter=1400,
+)
+
+
 GENERATED_EXPERIMENTS = generate_experiments(0)  # 1200
 
-EXPERIMENTS = []  # (
+EXPERIMENTS = [BEST_EXPERIMENT]  # (
 #     BASELINE_EXPERIMENTS + MANUALLY_CONFIGURED_EXPERIMENTS + GENERATED_EXPERIMENTS
 # )

@@ -1,3 +1,4 @@
+import json
 import re
 from collections import Counter
 from typing import Dict, List, Optional, Set
@@ -6,7 +7,8 @@ import numpy as np
 from spacy.tokens import Doc
 
 from src.globals import (HAND_SELECTED_POS_BIGRAMS, HAND_SELECTED_POS_TRIGRAMS,
-                         RANDOM_SEED, TOKEN_BLACKLIST, WORD_CLUSTERS)
+                         NEIGHBORHOODS_FPATH, RANDOM_SEED, TOKEN_BLACKLIST,
+                         WORD_CLUSTERS)
 from src.helpers import (convert_doc_to_n_grams, cosine_similarity,
                          get_exponentially_decaying_weights,
                          get_neighborhoods_from_training_data,
@@ -240,23 +242,32 @@ def topical_proximity_score(
 def neighborhood_degrees_of_presence(
     doc: Doc,
     gensim_model_slug: str,
-    use_by_episode_split: bool,
+    use_by_episode_split: bool = False,
     lemmatize: bool = True,
     max_top_n: Optional[int] = None,
     normalize: bool = False,
     weight_decay_rate: Optional[float] = None,
     n_neighbors: int = 5,
     use_blacklist: bool = False,
+    neighborhoods: Optional[Dict[str, np.ndarray]] = None,
+    save_neighborhoods: bool = False,
 ) -> Dict[str, float]:
     """See README.md for more info.""" ""
     suffix = "_norm" if lemmatize else ""
     suffix += "_lem" if normalize else ""
-    neighborhoods = get_neighborhoods_from_training_data(
-        use_by_episode_split=use_by_episode_split,
-        n_neighbors=n_neighbors,
-        lemmatize=lemmatize,
-        gensim_model_slug=gensim_model_slug,
-    )
+    if not neighborhoods:
+        neighborhoods = get_neighborhoods_from_training_data(
+            use_by_episode_split=use_by_episode_split,
+            n_neighbors=n_neighbors,
+            lemmatize=lemmatize,
+            gensim_model_slug=gensim_model_slug,
+        )
+    if save_neighborhoods:
+        serializable_neighborhoods = {
+            w: np.round(nghbhd, 2).tolist() for w, nghbhd in neighborhoods.items()
+        }
+        with open(NEIGHBORHOODS_FPATH, "w") as f:
+            json.dump(serializable_neighborhoods, f)
     model = load_embedding_model(gensim_model_slug)
     degrees_of_presence_by_neighborhood = {}
     for word, neighborhood in neighborhoods.items():
